@@ -1,0 +1,211 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Summary</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        .order-summary-container {
+            background-color: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+
+        .summary-header {
+            color: #2c3e50;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .table {
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .table thead {
+            background-color: #343a40;
+            color: white;
+        }
+
+        .table th, .table td {
+            vertical-align: middle;
+        }
+
+        .address-section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+
+        .total-amount {
+            font-size: 1.5em;
+            color: #2c3e50;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .payment-button {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            transition: transform 0.2s;
+        }
+
+        .payment-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .price-column {
+            color: #28a745;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container order-summary-container">
+        <h2 class="summary-header">Order Summary</h2>
+
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                <tr>
+                    <td class="product-name">{{ item.product.product_name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td class="price-column">₹{{ item.product.price }}</td>
+                    <td class="price-column">₹{{ item.get_total_price }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="total-amount text-right">
+            Total Amount: ₹{{ total_amount }}
+        </div>
+
+        <div class="address-section">
+            <h4 class="mb-3">Delivery Address</h4>
+            <p class="mb-0">
+                <strong>{{ address.house_name }}</strong><br>
+                {{ address.postal_address }}<br>
+                {{ address.city }}, {{ address.district }}<br>
+                {{ address.state }} - {{ address.pincode }}
+            </p>
+        </div>
+
+        <div class="text-center">
+            <button id="rzp-button1" class="btn btn-primary payment-button">
+                <i class="fas fa-money-bill mr-2"></i> Proceed to Payment
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        var options = {
+            "key": "rzp_test_7MkWbHUlMslHd2", // Your Razorpay Test Key ID
+            "amount": "{{ total_amount_paise }}", // Convert total price to paise
+            "currency": "INR",
+            "description": "Order Payment",
+            "image": "https://example.com/image/rzp.jpg", // Replace with your logo URL
+            "prefill": {
+                "email": "{{ user.email }}",
+                "contact": "{{ user.phone }}"
+            },
+            "handler": function (response) {
+                alert("Payment successful! Payment ID: " + response.razorpay_payment_id);
+
+                // Prepare payment data to send to the server
+                const paymentData = {
+                    payment_id: response.razorpay_payment_id,
+                    address_id: "{{ address.id }}",
+                    total_price: "{{ total_amount }}"
+                };
+
+                // Send payment data to server for processing
+                fetch('/payment_success/', {  // Your endpoint to handle the payment
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') // CSRF token
+                    },
+                    body: JSON.stringify(paymentData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert("Order placed successfully!");
+                        window.location.href = '/order_history/'; // Redirect to order history page
+                    } else {
+                        alert("Failed to place the order. Please try again.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert("An error occurred. Please try again.");
+                });
+            },
+            "modal": {
+                "ondismiss": function () {
+                    if (confirm("Are you sure you want to cancel the payment?")) {
+                        console.log("Payment canceled by the user.");
+                    } else {
+                        console.log("Please complete the payment.");
+                    }
+                }
+            }
+        };
+
+        var rzp1 = new Razorpay(options);
+
+        document.getElementById('rzp-button1').onclick = function (e) {
+            rzp1.open();
+            e.preventDefault(); // Prevent default button action
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+{% block title %}
+  Earring Collections
+{% endblock title %}
+
+
+{% block content %}
+
+<!-- Sidebar Filter Section -->
+<div class="filters">
+    <h4>Filter by</h4>
+    <form method="get" action="{% url 'earring_list' %}">
+        <!-- Earring Style Filter -->
+        <div>
+            <h3>Earring Style:</h3>
+            {% for style in earring_styles %}
+                <label>
+                    <input type="checkbox" name="earring_style" value="{{ style }}"
+                        {% if style in selected_earring_styles %}checked{% endif %}>
+                    {{ style }}
+                </label><br>
+            {% endfor %}
+        </div>
+
+        <br>
+        <!-- Shop For Filter -->
+        <div>
+            <h3>Shop For:</h3>
+            {% for category in shop_for_options %}
+                <label>
+                    <input type="checkbox" name="shop_for" value="{{ category }}"
+                        {% if category in selected_shop_for %}checked{% endif %}>
+                    {{ category }}
+                </label><br>
+            {% endfor %}
+        </div>
+
+        <br>
+        <!-- Gemstone Filter -->
+        <div>
+            <h3>Gemstone:</h3>
+            {% for gem in gemstones %}
+                <label>
+                    <input type="checkbox" name="gemstone" value="{{ gem }}"
+                        {% if gem in selected_gemstones %}checked{% endif %}>
+                    {{ gem }}
+                </label><br>
+            {% endfor %}
+        </div>
+
+        <br>
+        <!-- Metal Type Filter -->
+        <div>
+            <h3>Metal Type:</h3>
+            {% for mat in materials %}
+                <label>
+                    <input type="checkbox" name="metal_type" value="{{ mat }}"
+                        {% if mat in selected_materials %}checked{% endif %}>
+                    {{ mat }}
+                </label><br>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="button">Apply Filters</button>
+        <button type="button" class="button" onclick="window.location.href='/earring_list/'">Clear Filters</button>
+    </form>
+</div>
+
+<!-- Main Product List Section -->
+<div class="product-list">
+    <h2>Earrings Collection</h2>
+    <div class="row">
+        {% if earrings %}
+            {% for earring in earrings %}
+                <div class="product" data-earringstyle="{{ earring.earring_style }}" data-shopfor="{{ earring.shop_for }}" data-gemstone="{{ earring.gemstone }}" data-material="{{ earring.material }}">
+                    <img src="{{ earring.images.url }}" alt="{{ earring.product_name }}">
+                    <h5>{{ earring.product_name }}</h5>
+                    <p><strong>Price:</strong> Rs:{{ earring.price }}</p>
+                    <a href="{% url 'earring_detail' earring.product_id %}" class="button">View Details</a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-center">No earrings available at the moment.</p>
+        {% endif %}
+    </div>
+</div>
+
+
+{% endblock content %}

@@ -1,0 +1,92 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+{% block title %}
+Bracelet Collections
+{% endblock title %}
+
+
+{% block content %}
+
+
+    <!-- Sidebar Filter Section -->
+    <div class="filters">
+        <h4>Filter by</h4>
+        <form method="get" action="{% url 'bracelet_list' %}">
+            <!-- Bracelet Style Filter -->
+            <div>
+                <h3>Bracelet Style:</h3>
+                {% for style in bracelet_styles %}
+                    <label>
+                        <input type="checkbox" name="bracelet_style" value="{{ style }}"
+                            {% if style in selected_bracelet_styles %}checked{% endif %}>
+                        {{ style }}
+                    </label><br>
+                {% endfor %}
+            </div>
+
+            <br>
+            <!-- Shop For Filter -->
+            <div>
+                <h3>Shop For:</h3>
+                {% for shop in shop_for_options %}
+                    <label>
+                        <input type="checkbox" name="shop_for" value="{{ shop }}"
+                            {% if shop in selected_shop_for %}checked{% endif %}>
+                        {{ shop }}
+                    </label><br>
+                {% endfor %}
+            </div>
+
+            <br>
+            <!-- Gemstone Filter -->
+            <div>
+                <h3>Gemstone:</h3>
+                {% for gem in gemstones %}
+                    <label>
+                        <input type="checkbox" name="gemstone" value="{{ gem }}"
+                            {% if gem in selected_gemstones %}checked{% endif %}>
+                        {{ gem }}
+                    </label><br>
+                {% endfor %}
+            </div>
+
+            <br>
+            <!-- Metal Type Filter -->
+            <div>
+                <h3>Metal Type:</h3>
+                {% for mat in materials %}
+                    <label>
+                        <input type="checkbox" name="metal_type" value="{{ mat }}"
+                            {% if mat in selected_materials %}checked{% endif %}>
+                        {{ mat }}
+                    </label><br>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="button">Filter</button>
+            <button type="button" class="button" onclick="window.location.href='/bracelet_list/'">Clear Filters</button>
+        </form>
+    </div>
+    
+    <!-- Main Product List Section -->
+    <div class="product-list">
+        <h2>Bracelets Collection</h2>
+        <div class="row">
+            {% if bracelets %}
+                {% for bracelet in bracelets %}
+                    <div class="product" data-braceletstyle="{{ bracelet.bracelet_style }}" data-shopfor="{{ bracelet.shop_for }}" data-gemstone="{{ bracelet.stone_type }}" data-material="{{ bracelet.metal_type }}">
+                        <img src="{{ bracelet.images.url }}" alt="{{ bracelet.product_name }}">
+                        <h5>{{ bracelet.product_name }}</h5>
+                        <p>{{ bracelet.product_description|truncatewords:15 }}</p>
+                        <p><strong>Price:</strong> Rs:{{ bracelet.price }}</p>
+                        <a href="{% url 'bracelet_detail' bracelet.product_id %}" class="button">View Details</a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-center">No bracelets available at the moment.</p>
+            {% endif %}
+        </div>
+    </div>
+
+{% endblock content %}

@@ -1,0 +1,240 @@
+{% include 'admin/navbar.html' %}
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4">Admin Dashboard</h1>
+    <p>Welcome to the Ornalux admin panel. Manage your jewelry store operations using the options in the sidebar.</p>
+    
+    <!-- Alert Notification for Payment Requests -->
+    {% if payment_requests %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        You have {{ payment_requests.count }} pending payment request(s).
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#paymentRequestsModal">View Requests</button>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Sample dashboard content -->
+    <div class="row">
+        <div class="col-lg-3 col-md-6">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Total Products</h5>
+                    <p class="card-text">Manage all the jewelry items in the store.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Users</h5>
+                    <p class="card-text">Monitor registered users and their activities.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Orders</h5>
+                    <p class="card-text">View and manage customer orders.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Returns</h5>
+                    <p class="card-text">View and handle product returns.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Requests Modal -->
+    <div class="modal fade" id="paymentRequestsModal" tabindex="-1" role="dialog" aria-labelledby="paymentRequestsModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="paymentRequestsModalLabel">Pending Payment Requests</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Date Requested</th>
+                                <th>Amount</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payment_requests %}
+                            <tr>
+                                <td>{{ payment.vendor.business_name }}</td>
+                                <td>{{ payment.created_at|date:"M d, Y" }}</td>
+                                <td>${{ payment.amount }}</td>
+                                <td>
+                                    <button class="btn btn-success" onclick="openPaymentOptions({{ payment.id }}, {{ payment.amount }})">Make Payment</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Options Modal -->
+    <div class="modal fade" id="paymentOptionsModal" tabindex="-1" role="dialog" aria-labelledby="paymentOptionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="paymentOptionsModalLabel">Payment Options</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="paymentDetails"></p>
+                    <button class="btn btn-success" onclick="makePayment('advance')">Advance Payment</button>
+                    <button class="btn btn-warning" onclick="makePayment('post')">Post Payment</button>
+                    <button class="btn btn-secondary" onclick="makePayment('pay_later')">Pay Later</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+    // Function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function openPaymentOptions(paymentId, amount) {
+        // Store the payment ID and amount for later use
+        window.currentPaymentId = paymentId;
+        window.currentAmount = amount; // Store the amount
+        document.getElementById('paymentDetails').innerText = `Amount to be paid: $${amount}. Choose a payment option:`;
+        $('#paymentOptionsModal').modal('show');
+    }
+
+    function makePayment(option) {
+        const csrftoken = getCookie('csrftoken');
+        let amount = window.currentAmount; // Use the stored amount
+
+        var options = {
+            "key": "rzp_test_7MkWbHUlMslHd2", // Your Razorpay Test Key ID
+            "amount": amount * 100, // Convert to paise
+            "currency": "INR",
+            "description": "Payment for Order",
+            "image": "https://example.com/image/rzp.jpg", // Ensure to use a valid URL
+            "prefill": {
+                "email": "jeeljpaul2025@mca.ajce.in",
+                "contact": "9072613031" // Keep this as a string
+            },
+            "config": {
+                "display": {
+                    "blocks": {
+                        "utib": {
+                            "name": "Pay Using Axis Bank",
+                            "instruments": [
+                                {
+                                    "method": "card",
+                                    "issuers": ["UTIB"]
+                                },
+                                {
+                                    "method": "netbanking",
+                                    "banks": ["UTIB"]
+                                }
+                            ]
+                        },
+                        "other": {
+                            "name": "Other Payment Methods",
+                            "instruments": [
+                                {
+                                    "method": "card",
+                                    "issuers": ["ICIC", "HDFC", "SBI", "AXIS"]
+                                },
+                                {
+                                    "method": "netbanking"
+                                },
+                                {
+                                    "method": "upi", // Enable UPI payments
+                                    "issuers": ["googlepay", "paytm", "phonepe"] // Add specific UPI apps
+                                }
+                            ]
+                        }
+                    },
+                    "hide": [],
+                    "sequence": ["block.utib", "block.other"],
+                    "preferences": {
+                        "show_default_blocks": true // Show default blocks for other payment methods
+                    }
+                }
+            },
+            "handler": function (response) {
+                alert("Payment successful! Payment ID: " + response.razorpay_payment_id);
+
+                // Prepare payment data to send to the server
+                const paymentData = {
+                    payment_id: response.razorpay_payment_id,
+                    amount: amount,
+                    date: new Date().toISOString(), // Current date
+                    product_name: "Product Name", // Replace with actual product name
+                    quantity: 1, // Replace with actual quantity
+                    payment_type: option // 'advance' or 'post'
+                };
+
+                // Send payment data to server for processing
+                fetch('/process_payment/', {  // Your server endpoint to handle the payment
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken  // Send CSRF token for security
+                    },
+                    body: JSON.stringify(paymentData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert("Payment details saved successfully!");
+                        // Optionally redirect or update the UI
+                    } else {
+                        alert("Failed to save payment details.");
+                    }
+                });
+            },
+            "modal": {
+                "ondismiss": function () {
+                    if (confirm("Are you sure you want to close the form?")) {
+                        console.log("Checkout form closed by the user");
+                    } else {
+                        console.log("Complete the Payment");
+                    }
+                }
+            }
+        };
+
+        var rzp1 = new Razorpay(options);
+        rzp1.open();
+    }
+    </script>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Pickup Details</title>
+</head>
+<body>
+    <h1>Update Pickup Details</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        <label for="phone">Phone:</label>
+        <input type="text" id="phone" name="phone" value="{{ pickup.phone }}"><br><br>
+        
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" value="{{ pickup.email }}"><br><br>
+        
+        <button type="submit">Update</button>
+    </form>
+</body>
+</html>

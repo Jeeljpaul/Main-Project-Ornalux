@@ -1,0 +1,209 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+{% block title %}
+Booking Details
+{% endblock title %}
+<style>
+    .form-container {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        max-width: 600px;
+        margin: auto;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-container h3 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        font-weight: bold;
+        color: #555;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        width: 100%;
+        font-size: 16px;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        margin-left: 70px;
+        padding: 5px 0;
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
+        margin-top: 50px;
+        font-size: 14px;
+        color: #6c757d;
+    }
+
+    body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4
+        }
+
+        .product-details {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .product-details img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .product-info {
+            margin-bottom: 20px;
+        }
+
+        .product-info h3 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .product-info p {
+            margin: 5px 0;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 15px;
+            margin: 10px 5px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .back-button {
+            background-color: #6c757d;
+        }
+
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+
+        .wishlist-button {
+            background-color: #ffc107;
+        }
+
+        .wishlist-button:hover {
+            background-color: #e0a800;
+        }
+
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        margin-left: 70px;
+        padding: 5px 0;
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
+        margin-top: 50px;
+        font-size: 14px;
+        color: #6c757d;
+    }
+
+    .navbar {
+        transition: top 0.3s;
+    }
+
+    .nav-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5em;
+        margin: 0 15px;
+        padding: 8px;
+        transition: color 0.3s, transform 0.2s;
+    }
+
+    .nav-icon:hover {
+        color: #f8b400;
+        transform: scale(1.2);
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+    }
+
+    .nav-item + .nav-item {
+        margin-left: 20px;
+    }
+
+</style>
+
+<div class="breadcrumb-container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/">Home</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'allproducts' %}">Collection</a></li>
+          <!-- <li class="breadcrumb-item"><a href="{% url 'detail' product.product_id %}">Details</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Booking</li> -->
+        </ol>
+      </nav>
+{% block content %}
+<div class="container">
+    <h2>Booking Details</h2>
+    <div class="card">
+        <div class="card-body">
+            <h4>Product: {{ booking.product.product_name }}</h4>
+            <p><strong>User:</strong> {{ booking.user.name }}</p>
+            <p><strong>Phone:</strong> {{ booking.user.phone }}</p>
+            <p><strong>Address:</strong> {{ booking.address }}</p>
+            <p><strong>Booking Date:</strong> {{ booking.booking_date }}</p>
+            <p><strong>Status:</strong> 
+                {% if booking.status == 'pending' %}
+                    <span class="badge badge-warning">Pending</span>
+                {% elif booking.status == 'confirmed' %}
+                    <span class="badge badge-success">Confirmed</span>
+                {% elif booking.status == 'cancelled' %}
+                    <span class="badge badge-danger">Cancelled</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock content %}

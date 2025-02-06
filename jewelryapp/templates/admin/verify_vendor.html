@@ -1,0 +1,239 @@
+{% extends 'admin/navbar.html' %}
+{% block content %}
+<style>
+    .verification-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 15px;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        background: linear-gradient(to bottom, #ffffff, #f8f9fa);
+        border-radius: 12px;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .upload-area {
+        border: 2px dashed #6c63ff;
+        background: rgba(108, 99, 255, 0.03);
+        border-radius: 12px;
+        padding: 2.5rem;
+    }
+    
+    .upload-area:hover {
+        border-color: #5048e5;
+        background-color: rgba(108, 99, 255, 0.08);
+    }
+    
+    .upload-icon {
+        font-size: 48px;
+        color: #6c63ff;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(45deg, #6c63ff, #5048e5);
+        border: none;
+        padding: 12px 30px;
+        border-radius: 25px;
+        box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(108, 99, 255, 0.4);
+        background: linear-gradient(45deg, #5048e5, #6c63ff);
+    }
+
+    h2.text-center {
+        background: linear-gradient(45deg, #6c63ff, #5048e5);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        font-weight: bold;
+    }
+    
+    .progress {
+        height: 25px;
+        border-radius: 12px;
+        background-color: #f0f0f0;
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        transition: width 1s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+</style>
+
+<div class="verification-container">
+    <h2 class="text-center mb-4">Document Verification Tool</h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title text-center mb-4">Upload Document for Verification</h5>
+            <form id="verificationForm" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="upload-area" id="dropZone">
+                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                    <h5>Drag & Drop or Click to Upload</h5>
+                    <input type="file" class="form-control-file d-none" id="document" name="document" 
+                           accept=".jpg,.jpeg,.png,.pdf" required>
+                    <p class="text-muted mt-2">
+                        Supported formats: JPG, JPEG, PNG, PDF
+                    </p>
+                </div>
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                        <i class="fas fa-shield-alt mr-2"></i> Verify Document
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="results" class="mt-4" style="display: none;">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Verification Results</h5>
+                <div id="resultContent"></div>
+                <div class="progress mt-3" style="height: 25px;">
+                    <div id="authenticityScore" class="progress-bar" role="progressbar" 
+                         style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('document');
+    
+    // Handle drag and drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#007bff';
+        dropZone.style.backgroundColor = 'rgba(0, 123, 255, 0.05)';
+    });
+    
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ccc';
+        dropZone.style.backgroundColor = 'transparent';
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        fileInput.files = files;
+        updateFileName(files[0].name);
+        dropZone.style.borderColor = '#28a745';
+    });
+    
+    dropZone.addEventListener('click', () => {
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            updateFileName(e.target.files[0].name);
+        }
+    });
+    
+    function updateFileName(name) {
+        dropZone.querySelector('h5').textContent = `Selected: ${name}`;
+    }
+    
+    // Enhanced form submission
+    document.getElementById('verificationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const resultsDiv = document.getElementById('results');
+        const resultContent = document.getElementById('resultContent');
+        const scoreBar = document.getElementById('authenticityScore');
+        
+        // Show loading state
+        resultContent.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Analyzing document...</p>
+            </div>
+        `;
+        resultsDiv.style.display = 'block';
+        
+        fetch('/verify-document/analyze/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const score = Math.round(data.authenticity_score * 100);
+                const isSuspicious = data.is_suspicious;
+                
+                scoreBar.style.width = score + '%';
+                scoreBar.innerHTML = score + '%';
+                
+                if (isSuspicious) {
+                    scoreBar.classList.remove('bg-success');
+                    scoreBar.classList.add('bg-danger');
+                    resultContent.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Warning:</strong> This document shows signs of potential manipulation.
+                            <br>
+                            Authenticity Score: ${score}%
+                        </div>`;
+                } else {
+                    scoreBar.classList.remove('bg-danger');
+                    scoreBar.classList.add('bg-success');
+                    resultContent.innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>Success:</strong> Document appears to be authentic.
+                            <br>
+                            Authenticity Score: ${score}%
+                        </div>`;
+                }
+            } else {
+                resultContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> ${data.message}
+                    </div>`;
+            }
+        })
+        .catch(error => {
+            resultContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> An error occurred during verification.
+                </div>`;
+        });
+    });
+});
+</script>
+{% endblock %} 

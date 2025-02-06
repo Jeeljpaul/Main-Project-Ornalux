@@ -1,0 +1,1213 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Old Gold Exchange</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <style>
+        /* Base styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #2d3436;
+        }
+
+        /* Container styles */
+        .container {
+            max-width: 1400px;
+            margin: 80px auto 50px;
+            padding: 0 30px;
+        }
+
+        /* Section styles */
+        .section {
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Calculation container styles */
+        .calculation-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 992px) {
+            .calculation-container {
+                flex-direction: column;
+            }
+        }
+
+        /* Form styles */
+        .calculation-form {
+            flex: 3;
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Gold rates styles */
+        .gold-rates {
+            flex: 2;
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Toggle buttons */
+        .toggle-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .toggle-buttons button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(45deg, #2a5298, #1e3c72);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+
+        .toggle-buttons button.active {
+            opacity: 1;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Form sections */
+        .form-section {
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Form inputs */
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2d3436;
+            font-weight: 500;
+        }
+
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="number"]:focus,
+        select:focus {
+            border-color: #2a5298;
+            box-shadow: 0 0 0 2px rgba(42, 82, 152, 0.1);
+            outline: none;
+        }
+
+        /* Gold rate cards */
+        .gold-rate-card {
+            background: linear-gradient(135deg, #ffffff, #f8f9fa);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .gold-rate-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+        }
+
+        .gold-rate-card h3 {
+            color: #2a5298;
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+
+        .gold-rate-card span {
+            color: #1e3c72;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        /* Service options */
+        #service-options {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #eee;
+            display: none; /* Initially hidden */
+        }
+
+        .service-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        #service-options button {
+            flex: 1;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(45deg, #27ae60, #20914e);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #service-options button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Calculate buttons */
+        #calculate-karat,
+        #calculate-purity {
+            width: 100%;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(45deg, #2a5298, #1e3c72);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 20px;
+        }
+
+        #calculate-karat:hover,
+        #calculate-purity:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Gold value display */
+        #gold-value {
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(45deg, #ffd700, #ffb900);
+            border-radius: 10px;
+            font-weight: 500;
+            color: #000;
+            line-height: 1.6;
+        }
+
+        #gold-value strong {
+            font-weight: 600;
+            color: #1e3c72;
+        }
+
+        /* Steps and Terms sections */
+        .section h2 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .section ol {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+
+        .section ol li {
+            margin-bottom: 10px;
+            color: #2d3436;
+            line-height: 1.6;
+        }
+
+        .section p {
+            color: #2d3436;
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 20px;
+                margin-top: 60px;
+            }
+
+            .section {
+                padding: 20px;
+            }
+
+            .gold-rate-card h3 {
+                font-size: 16px;
+        }
+
+        .gold-rate-card span {
+            font-size: 18px;
+            }
+        }
+
+        @media (max-width: 576px) {
+        .toggle-buttons {
+                flex-direction: column;
+            }
+
+            .toggle-buttons button {
+                width: 100%;
+            }
+
+            .service-buttons {
+                flex-direction: column;
+            }
+            
+            #service-options button {
+                width: 100%;
+                margin: 5px 0;
+            }
+        }
+
+        /* Result Modal Styles */
+        .result-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .result-modal-content {
+            position: relative;
+            background: white;
+            margin: 10% auto;
+            padding: 25px;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 20px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .close-result {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close-result:hover {
+            color: #1e3c72;
+            transform: rotate(90deg);
+        }
+
+        .result-content {
+            margin-top: 10px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+            margin-top: 15px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .result-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .result-value {
+            color: #1e3c72;
+            font-weight: 600;
+        }
+
+        .final-value {
+            font-size: 1.2em;
+            color: #2a5298;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 576px) {
+            .result-modal-content {
+                margin: 20% auto;
+                width: 95%;
+                padding: 20px;
+            }
+        }
+
+        /* Pickup Modal Styles */
+        .pickup-modal, .thank-you-modal {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            min-height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+            padding: 20px;
+        }
+
+        .pickup-modal-content, .thank-you-content {
+            position: relative;
+            background: white;
+            margin: 50px auto;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .close-pickup, .close-thank-you {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .close-pickup:hover, .close-thank-you:hover {
+            color: #ff4444;
+            background-color: rgba(0, 0, 0, 0.05);
+            transform: rotate(90deg);
+        }
+
+        .pickup-modal h3, .store-modal h3 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-size: 20px;
+            padding-right: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #2d3436;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn, .ok-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(45deg, #27ae60, #20914e);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover, .ok-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Thank You Modal Styles */
+        .thank-you-message {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .thank-you-message i {
+            font-size: 50px;
+            color: #27ae60;
+            margin-bottom: 20px;
+        }
+
+        .thank-you-message h3 {
+            color: #2a5298;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        .thank-you-message p {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+
+        @media (max-width: 576px) {
+            .pickup-modal-content, .thank-you-content {
+                margin: 30px auto;
+                padding: 20px;
+            }
+        }
+
+        /* Store Visit Modal Styles */
+        .store-modal {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            min-height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+            padding: 20px;
+        }
+
+        .store-modal-content {
+            position: relative;
+            background: white;
+            margin: 50px auto;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .close-store {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .close-store:hover {
+            color: #ff4444;
+            background-color: rgba(0, 0, 0, 0.05);
+            transform: rotate(90deg);
+        }
+
+        @media (max-width: 576px) {
+            .store-modal-content {
+                margin: 30px auto;
+                padding: 20px;
+                width: 95%;
+            }
+        }
+
+        /* Add smooth scrolling to the modal */
+        .store-modal {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body>
+    {% csrf_token %}
+    <div class="container">
+        <!-- Section 1: Calculation -->
+        <div class="section calculation-container">
+            <div class="calculation-form">
+                <h2>Old Gold Exchange Calculator</h2>
+                <div class="toggle-buttons">
+                    <button id="karatage-btn" class="active">Karatage</button>
+                    <button id="purity-btn">Purity</button>
+                </div>
+
+                <!-- Add hidden CSRF token input -->
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+                <!-- Karatage Form -->
+                <form id="karatage-form" class="form-section active">
+                    <label for="weight-karat">Weight (grams):</label>
+                    <input type="number" id="weight-karat" name="weight" required pattern="[0-9]+" oninput="validateWeightInput(this)">
+
+                    <label for="karat">Karat:</label>
+                    <select id="karat" name="karat" required>
+                        <option value="24">24K</option>
+                        <option value="22">22K</option>
+                        <option value="18">18K</option>
+                        <option value="14">14K</option>
+                    </select>
+
+                    <button type="button" id="calculate-karat">Calculate Exchange Value</button>
+                </form>
+
+                <!-- Purity Form -->
+                <form id="purity-form" class="form-section">
+                    <label for="weight-purity">Weight (grams):</label>
+                    <input type="number" id="weight-purity" name="weight" required pattern="[0-9]+" oninput="validateWeightInput(this)">
+                    
+                    <label for="purity">Purity (%):</label>
+                    <input type="number" id="purity" name="purity" required min="0" max="100" step="0.01" pattern="[0-9]+" oninput="validateWeightInput(this)">
+                    
+                    <button type="button" id="calculate-purity">Calculate Exchange Value</button>
+                </form>
+
+                <!-- Service Options (moved inside calculation-form) -->
+            <div id="service-options">
+                <h2>Service Options</h2>
+                    <div class="service-buttons">
+                <button onclick="selectOption('pickup')">Pick from Home</button>
+                <button onclick="selectOption('store')">Go to Store</button>
+            </div>
+            </div>
+            </div>
+
+            <!-- Gold Rates -->
+            <div class="gold-rates">
+                <h2>Gold Rates (Real-Time)</h2>
+                <div id="gold-rate-display">
+                    <p>Loading rates...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Steps -->
+        <div class="section">
+            <h2>Steps for Exchanging Gold</h2>
+            <ol>
+                <li>Provide your gold details.</li>
+                <li>Choose your preferred service option.</li>
+                <li>Gold will be evaluated by our experts.</li>
+                <li>Receive an offer and complete the exchange.</li>
+            </ol>
+        </div>
+
+        <!-- Section 3: Terms and Conditions -->
+        <div class="section">
+            <h2>Terms and Conditions</h2>
+            <p>Please read the terms and conditions carefully before proceeding with the exchange process. Ensure that the gold you wish to exchange meets the necessary criteria. The evaluation process is conducted by certified professionals, and the final offer is non-negotiable.</p>
+        </div>
+    </div>
+
+    <!-- Add this HTML for the result modal just before closing body tag -->
+    <div class="result-modal" id="resultModal">
+        <div class="result-modal-content">
+            <span class="close-result">&times;</span>
+            <div class="result-content" id="resultContent">
+                <!-- Results will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this HTML for the pickup form modal before closing body tag -->
+    <div class="pickup-modal" id="pickupModal">
+        <div class="pickup-modal-content">
+            <span class="close-pickup">&times;</span>
+            <h3>Schedule Pickup</h3>
+            <form id="pickupForm" onsubmit="submitPickupForm(event)">
+                <div class="form-group">
+                    <label for="pickup-name">Name:</label>
+                    <input type="text" id="pickup-name" name="name" required oninput="validateNameInput(this)">
+                </div>
+                <div class="form-group">
+                    <label for="pickup-phone">Phone Number:</label>
+                    <input type="tel" id="pickup-phone" name="phone" required pattern="[0-9]{10}" oninput="validatePhoneNumber(this)" onblur="validatePhoneStart(this)">
+                </div>
+
+                <div class="form-group">
+                    <label for="pickup-email">Email:</label>
+                    <input type="email" id="pickup-email" name="email" required oninput="validateEmailInput(this)">
+                </div>
+    
+                <div class="form-group">
+                    <label for="pickup-place">Place:</label>
+                    <input type="text" id="pickup-place" name="place" required oninput="validateNameInput(this)">
+                </div>
+                
+               
+                
+                <button type="submit" class="submit-btn">Submit</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add this HTML for the thank you modal -->
+    <div class="thank-you-modal" id="thankYouModal">
+        <div class="thank-you-content">
+            <span class="close-thank-you">&times;</span>
+            <div class="thank-you-message">
+                <i class="fas fa-check-circle"></i>
+                <h3>Thank You!</h3>
+                <p>We have received your details. Our team will contact you soon.</p>
+                <button onclick="closeThankYouModal()" class="ok-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this HTML for the store visit modal before closing body tag -->
+    <div class="store-modal" id="storeModal">
+        <div class="store-modal-content">
+            <span class="close-store">&times;</span>
+            <h3>Schedule Store Visit</h3>
+            <form id="storeVisitForm" onsubmit="submitStoreVisit(event)">
+                <div class="form-group">
+                    <label for="visit-name">Name:</label>
+                    <input type="text" id="visit-name" required value="{{ request.user.first_name }} {{ request.user.last_name }}" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="visit-phone">Phone Number:</label>
+                    <input type="tel" id="visit-phone" required pattern="[0-9]{10}" 
+                           oninput="validatePhoneNumber(this)" onchange="validatePhoneStart(this)" 
+                           placeholder="Enter 10-digit number">
+                </div>
+                <div class="form-group">
+                    <label for="visit-date">Preferred Date:</label>
+                    <input type="date" id="visit-date" required min="{{ today_date|date:'Y-m-d' }}"
+                           onchange="validateTimeOptions()">
+                </div>
+                <div class="form-group">
+                    <label for="visit-time">Preferred Time:</label>
+                    <select id="visit-time" required>
+                        <option value="">Select Time</option>
+                        <option value="10:00">10:00 AM</option>
+                        <option value="11:00">11:00 AM</option>
+                        <option value="12:00">12:00 PM</option>
+                        <option value="14:00">2:00 PM</option>
+                        <option value="15:00">3:00 PM</option>
+                        <option value="16:00">4:00 PM</option>
+                        <option value="17:00">5:00 PM</option>
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn">Schedule Visit</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get CSRF token from the meta tag or hidden input
+            function getCSRFToken() {
+                return document.querySelector('[name=csrfmiddlewaretoken]').value;
+            }
+
+            // Toggle forms based on the selected button
+            const karatageBtn = document.getElementById('karatage-btn');
+            const purityBtn = document.getElementById('purity-btn');
+            const karatageForm = document.getElementById('karatage-form');
+            const purityForm = document.getElementById('purity-form');
+
+            karatageBtn.addEventListener('click', () => {
+                karatageForm.classList.add('active');
+                purityForm.classList.remove('active');
+                karatageBtn.classList.add('active');
+                purityBtn.classList.remove('active');
+            });
+
+            purityBtn.addEventListener('click', () => {
+                purityForm.classList.add('active');
+                karatageForm.classList.remove('active');
+                purityBtn.classList.add('active');
+                karatageBtn.classList.remove('active');
+            });
+
+            // Get current gold rates
+            let currentGoldRates = {
+                '24K': 0,
+                '22K': 0,
+                '18K': 0,
+                '14K': 0
+            };
+
+            // Calculate functions for both forms
+            document.getElementById('calculate-karat').addEventListener('click', () => {
+                const weight = parseFloat(document.getElementById('weight-karat').value);
+                const karat = parseInt(document.getElementById('karat').value);
+                
+                if (weight && karat) {
+                    const rate = currentGoldRates[karat + 'K'];
+                    const value = weight * rate;
+                    const exchangeValue = value * 0.85;
+                    
+                    const resultHTML = `
+                        <h3 style="color: #2a5298; margin-bottom: 20px;">Calculation Results</h3>
+                        <div class="result-row">
+                            <span class="result-label">Weight:</span>
+                            <span class="result-value">${weight} grams</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Karat:</span>
+                            <span class="result-value">${karat}K</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Current Rate:</span>
+                            <span class="result-value">₹${rate.toFixed(2)}/gram</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Market Value:</span>
+                            <span class="result-value">₹${value.toFixed(2)}</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Exchange Value:</span>
+                            <span class="result-value final-value">₹${exchangeValue.toFixed(2)}</span>
+                        </div>
+                    `;
+                    
+                    showResultModal(resultHTML);
+                    showServiceOptions(); // Show service options after calculation
+                } else {
+                    alert('Please enter valid weight and karat values');
+                }
+            });
+
+            document.getElementById('calculate-purity').addEventListener('click', () => {
+                const weight = parseFloat(document.getElementById('weight-purity').value);
+                const purity = parseFloat(document.getElementById('purity').value);
+                
+                if (weight && purity && purity <= 100) {
+                    const baseRate = currentGoldRates['24K'];
+                    const purityDecimal = purity / 100;
+                    const pureGoldWeight = weight * purityDecimal;
+                    const marketValue = pureGoldWeight * baseRate;
+                    const exchangeValue = marketValue * 0.85;
+                    
+                    const resultHTML = `
+                        <h3 style="color: #2a5298; margin-bottom: 20px;">Calculation Results</h3>
+                        <div class="result-row">
+                            <span class="result-label">Weight:</span>
+                            <span class="result-value">${weight} grams</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Purity:</span>
+                            <span class="result-value">${purity}%</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Pure Gold Content:</span>
+                            <span class="result-value">${pureGoldWeight.toFixed(3)} grams</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Current 24K Rate:</span>
+                            <span class="result-value">₹${baseRate.toFixed(2)}/gram</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Market Value:</span>
+                            <span class="result-value">₹${marketValue.toFixed(2)}</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Exchange Value:</span>
+                            <span class="result-value final-value">₹${exchangeValue.toFixed(2)}</span>
+                        </div>
+                    `;
+                    
+                    showResultModal(resultHTML);
+                    showServiceOptions(); // Show service options after calculation
+                } else {
+                    alert('Please enter valid weight and purity values (purity should be between 0 and 100)');
+                }
+            });
+
+            // Update gold rates fetch to store current rates
+            // const apiKey = 'goldapi-17slwbsm27mhx49-io';
+            // const apiUrl = 'https://www.goldapi.io/api/';
+
+            fetch(`${apiUrl}XAU/INR`, {
+                method: 'GET',
+                headers: {
+                    'x-access-token': apiKey,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                const goldRatePerGram24K = data.price / 31.1035;
+                currentGoldRates = {
+                    '24K': goldRatePerGram24K,
+                    '22K': goldRatePerGram24K * 0.9167,
+                    '18K': goldRatePerGram24K * 0.75,
+                    '14K': goldRatePerGram24K * 0.5833,
+                };
+
+                const goldRateDisplay = document.getElementById('gold-rate-display');
+                goldRateDisplay.innerHTML = '';
+                for (const [karat, rate] of Object.entries(currentGoldRates)) {
+                    const card = `
+                        <div class="gold-rate-card">
+                            <h3>${karat} Karat Gold</h3>
+                            <span>₹${rate.toFixed(2)} (1 Gram)</span>
+                        </div>
+                    `;
+                    goldRateDisplay.innerHTML += card;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching gold rates:', error);
+                document.getElementById('gold-rate-display').innerHTML = '<p>Error loading gold rates</p>';
+                // Set fallback rates in case API fails
+                currentGoldRates = {
+                    '24K': 5500,
+                    '22K': 5500 * 0.9167,
+                    '18K': 5500 * 0.75,
+                    '14K': 5500 * 0.5833,
+                };
+            });
+        });
+
+        // Handle service option selection
+        function selectOption(option) {
+            if (option === 'pickup') {
+                document.getElementById('pickupModal').style.display = 'block';
+            } else if (option === 'store') {
+                document.getElementById('storeModal').style.display = 'block';
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('visit-date').min = today;
+                validateTimeOptions();
+            }
+        }
+
+        // Add this function to show the modal
+        function showResultModal(content) {
+            const modal = document.getElementById('resultModal');
+            const resultContent = document.getElementById('resultContent');
+            resultContent.innerHTML = content;
+            modal.style.display = 'block';
+        }
+
+        // Add modal close functionality
+        document.querySelector('.close-result').onclick = function() {
+            document.getElementById('resultModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = [
+                document.getElementById('resultModal'),
+                document.getElementById('pickupModal'),
+                document.getElementById('thankYouModal'),
+                document.getElementById('storeModal')
+            ];
+            
+            modals.forEach(modal => {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Add this function to show service options after calculation
+        function showServiceOptions() {
+            document.getElementById('service-options').style.display = 'block';
+            // Smooth scroll to service options
+            document.getElementById('service-options').scrollIntoView({ behavior: 'smooth' });
+        }
+
+// Add form submission handling
+function submitPickupForm(event) {
+    event.preventDefault(); // Prevent default form submission behavior
+
+    // Get form values
+    const name = document.getElementById('pickup-name').value;
+    const phone = document.getElementById('pickup-phone').value;
+    const email = document.getElementById('pickup-email').value;
+    const place = document.getElementById('pickup-place').value;
+
+    // Log the values for debugging purposes
+    console.log({ name, phone, email, place });
+
+    // AJAX call to submit data to the server
+    fetch('/save-pickup-details/', { 
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(), 
+         },
+        body: JSON.stringify({
+            name: name,
+            phone: phone,
+            email: email,
+            place: place,
+        }),
+    })
+    .then(response => response.text())  // Use text() to capture raw response
+    .then(rawData => {
+        console.log('Raw Response:', rawData);  // Log the raw response
+        try {
+            const data = JSON.parse(rawData);  // Try parsing as JSON
+            if (data.success) {
+                alert('Form submitted successfully!');
+                document.getElementById('pickupModal').style.display = 'none';
+                document.getElementById('thankYouModal').style.display = 'block';
+                event.target.reset();
+            } else {
+                alert('Error submitting form: ' + (data.error || 'Unknown error occurred.'));
+            }
+        } catch (error) {
+            console.error('Error parsing response:', error);
+            alert('Failed to parse the response. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while submitting the form. Please try again later.');
+    });
+}
+
+// Function to close the thank you modal
+function closeThankYouModal() {
+    document.getElementById('thankYouModal').style.display = 'none';
+}
+
+// Function to get CSRF token from the HTML
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Event listener for the close button on the thank you modal
+document.querySelector('.close-thankyou').addEventListener('click', closeThankYouModal);
+
+
+
+
+
+function getCSRFToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    return csrfToken;
+}
+
+function submitStoreVisit(event) {
+    event.preventDefault();
+    
+    const name = document.getElementById('visit-name').value;
+    const phone = document.getElementById('visit-phone').value;
+    const date = document.getElementById('visit-date').value;
+    const time = document.getElementById('visit-time').value;
+
+    // Submit data using fetch
+    fetch('/schedule-store-visit/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        },
+        body: JSON.stringify({
+            name: name,
+            phone: phone,
+            date: date,
+            time: time
+        }),
+    })
+    .then(response => {
+    console.log('Raw response:', response);
+    return response.json(); // Attempt to parse as JSON
+    })    
+    .then(data => {
+        if (data.success) {
+            document.getElementById('storeModal').style.display = 'none';
+            document.getElementById('thankYouModal').style.display = 'block';
+            event.target.reset();
+        } else {
+            alert('Error scheduling visit: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error scheduling visit. Please try again.');
+    });
+}
+
+// Add close functionality for store modal
+document.querySelector('.close-store').onclick = function() {
+    document.getElementById('storeModal').style.display = 'none';
+};
+
+
+function validateWeightInput(input) {
+    input.value = input.value.replace(/[^0-9]/g, ''); // Remove any non-numeric characters
+}
+
+// Function to validate name input (letters and spaces only)
+function validateNameInput(input) {
+    input.value = input.value.replace(/[^a-zA-Z\s]/g, ''); // Remove numbers and special characters
+}
+
+function validatePhoneNumber(input) {
+    input.value = input.value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
+    if (input.value.length > 10) {
+        input.value = input.value.slice(0, 10); // Restrict input to 10 digits
+    }
+}
+
+function validatePhoneStart(input) {
+    const validStart = /^[6-9]/; // Phone number must start with 6, 7, 8, or 9
+    if (!validStart.test(input.value.charAt(0)) && input.value.length > 0) {
+        alert('Phone number must start with 6, 7, 8, or 9.');
+        input.value = ''; // Clear the input
+    }
+}
+
+function validateEmailInput(input) {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Standard email regex
+    if (!emailPattern.test(input.value)) {
+        input.setCustomValidity("Please enter a valid email address.");
+    } else {
+        input.setCustomValidity(""); // Clear the error
+    }
+}
+function validateTimeOptions() {
+    const currentDate = new Date();
+    const currentHours = currentDate.getHours();
+    const currentMinutes = currentDate.getMinutes();
+
+    const visitDate = document.getElementById('visit-date').value;
+    const visitTime = document.getElementById('visit-time');
+
+    const options = visitTime.querySelectorAll('option');
+
+    // Reset all options before applying conditions
+    options.forEach(option => {
+        option.disabled = false;
+    });
+
+    // If the visit date is today, disable past times
+    if (visitDate === currentDate.toISOString().split('T')[0]) {
+        options.forEach(option => {
+            const [hours, minutes] = option.value.split(':');
+            const optionTimeInMinutes = Number(hours) * 60 + Number(minutes);
+            const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+
+            // Disable if the time is in the past
+            if (optionTimeInMinutes <= currentTimeInMinutes) {
+                option.disabled = true;
+            }
+        });
+
+        // Check if all times are disabled (working hours have passed)
+        const allDisabled = Array.from(options).every(option => option.disabled || option.value === "");
+        if (allDisabled) {
+            alert("Working hours for today have passed. Please select a different date.");
+        }
+    }
+}
+
+// Disable Sundays and public holidays in the date picker
+function disableInvalidDates() {
+    const visitDateInput = document.getElementById('visit-date');
+    const publicHolidays = [
+        '2025-01-26', // Republic Day
+        '2025-08-15', // Independence Day
+        '2025-10-02'  // Gandhi Jayanti
+    ];
+
+    visitDateInput.addEventListener('input', () => {
+        const selectedDate = new Date(visitDateInput.value);
+        const dayOfWeek = selectedDate.getDay(); // 0 = Sunday
+
+        if (dayOfWeek === 0 || publicHolidays.includes(visitDateInput.value)) {
+            visitDateInput.setCustomValidity('Sundays and public holidays are not selectable.');
+        } else {
+            visitDateInput.setCustomValidity('');
+        }
+    });
+
+    visitDateInput.addEventListener('focus', () => {
+        const today = new Date();
+        const minDate = today.toISOString().split('T')[0]; // Today's date in YYYY-MM-DD
+        visitDateInput.setAttribute('min', minDate);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    disableInvalidDates();
+});
+
+
+    </script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', validateTimeOptions);
+    </script>
+</body>
+</html>

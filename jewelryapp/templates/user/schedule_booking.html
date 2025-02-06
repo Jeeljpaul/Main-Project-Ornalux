@@ -1,0 +1,272 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+
+{% block content %}
+<!-- Add inline CSS for styling -->
+<style>
+    .form-container {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        max-width: 600px;
+        margin: auto;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-container h3 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        font-weight: bold;
+        color: #555;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        width: 100%;
+        font-size: 16px;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        margin-left: 70px;
+        padding: 5px 0;
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
+        margin-top: 50px;
+        font-size: 14px;
+        color: #6c757d;
+    }
+
+    body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4
+        }
+
+        .product-details {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .product-details img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .product-info {
+            margin-bottom: 20px;
+        }
+
+        .product-info h3 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .product-info p {
+            margin: 5px 0;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 15px;
+            margin: 10px 5px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .back-button {
+            background-color: #6c757d;
+        }
+
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+
+        .wishlist-button {
+            background-color: #ffc107;
+        }
+
+        .wishlist-button:hover {
+            background-color: #e0a800;
+        }
+
+    /* Breadcrumb styling */
+    .breadcrumb-container {
+        margin-left: 70px;
+        padding: 5px 0;
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
+        margin-top: 50px;
+        font-size: 14px;
+        color: #6c757d;
+    }
+
+    .navbar {
+        transition: top 0.3s;
+    }
+
+    .nav-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5em;
+        margin: 0 15px;
+        padding: 8px;
+        transition: color 0.3s, transform 0.2s;
+    }
+
+    .nav-icon:hover {
+        color: #f8b400;
+        transform: scale(1.2);
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+    }
+
+    .nav-item + .nav-item {
+        margin-left: 20px;
+    }
+
+</style>
+<div class="breadcrumb-container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/">Home</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'allproducts' %}">Collection</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'detail' product.product_id %}">Details</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Booking</li>
+        </ol>
+      </nav>
+      
+</div>
+<div class="form-container">
+    <h3>Book Schedule for {{ product.product_name }}</h3>
+    <form id="schedule-form" method="POST" action="{% url 'submit_schedule' product.product_id %}">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" class="form-control" 
+                   value="{{ user.name }}" required readonly>
+        </div>
+        <div class="form-group">
+            <label for="phone">Phone Number:</label>
+            <input type="text" id="phone" name="phone" class="form-control" 
+                   value="{{ user.phone }}" required readonly>
+        </div>
+        <div class="form-group">
+            <label for="address">Address:</label>
+            <textarea id="address" name="address" class="form-control" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="schedule-date">Pick a Date:</label>
+            <input type="date" id="schedule-date" name="date" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Date validation
+        const dateInput = document.getElementById('schedule-date');
+
+        // Get today's date
+        let today = new Date();
+        let todayISO = today.toISOString().split('T')[0];
+
+        // Set min date to today
+        dateInput.min = todayISO;
+
+        // Get the date three months from today
+        let maxDate = new Date(today);
+        maxDate.setMonth(today.getMonth() + 3);
+
+        // Adjust for the end of the year wrap-around case
+        if (maxDate.getMonth() + 3 > 11) {
+            maxDate.setFullYear(today.getFullYear() + 1);
+            maxDate.setMonth(maxDate.getMonth() % 12);
+        }
+
+        let maxDateISO = maxDate.toISOString().split('T')[0];
+        dateInput.max = maxDateISO;
+
+        // Disable already booked dates
+        let bookedDates = [
+            {% for booked_date in booked_dates %}
+                "{{ booked_date }}",
+            {% endfor %}
+        ];
+
+        dateInput.addEventListener('change', function() {
+            let selectedDate = new Date(this.value);
+
+            // Check if the selected date is unavailable
+            if (bookedDates.includes(this.value)) {
+                alert('This date is already booked. Please select another date.');
+                this.value = '';
+            }
+        });
+
+        // Address validation
+        const addressInput = document.getElementById('address');
+        addressInput.addEventListener('input', function() {
+            const address = this.value.trim();
+
+            // Check if address is at least 10 characters
+            if (address.length < 10) {
+                this.setCustomValidity('Address must be at least 10 characters long.');
+            } else if (!/^[a-zA-Z0-9\s,.'-]+$/.test(address)) {
+                this.setCustomValidity('Address can only contain alphanumeric characters, commas, periods, apostrophes, and dashes.');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    });
+</script>
+{% endblock content %}

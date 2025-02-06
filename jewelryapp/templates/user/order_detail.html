@@ -1,0 +1,181 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+{% block content %}
+<style>
+    .order-detail-container {
+        padding: 40px 20px;
+        background-color: #f8f9fa;
+    }
+
+    .order-info-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+
+    .order-header {
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+
+    .status-timeline {
+        margin: 30px 0;
+        padding: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    }
+
+    .timeline-item {
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 8px;
+        background: #f8f9fa;
+        position: relative;
+    }
+
+    .timeline-item.active {
+        background: #28a745;
+        color: white;
+    }
+
+    .status-text {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .status-date {
+        font-size: 0.9em;
+        color: inherit;
+        opacity: 0.8;
+    }
+
+    .timeline-item.active .status-date {
+        color: white;
+    }
+
+    .product-card {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .product-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .product-info {
+        padding: 15px;
+    }
+
+    .price-text {
+        color: #28a745;
+        font-weight: bold;
+    }
+
+    .delivery-flow {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-top: 30px;
+    }
+
+    .flow-item {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+
+    .flow-item.active {
+        background-color: #007bff;
+        color: white;
+    }
+</style>
+
+<div class="order-detail-container">
+    <div class="container">
+        <div class="order-info-card">
+            <div class="order-header">
+                <h2>Order Details</h2>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Order Date:</strong> {{ order.order_date|date:"F d, Y" }}</p>
+                    <p><strong>Payment Status:</strong> 
+                        <span class="badge badge-{{ order.payment_status|lower }}">
+                            {{ order.payment_status }}
+                        </span>
+                    </p>
+                    {% if order.payment_status == 'Pending' %}
+                        <div class="payment-section">
+                            <p class="text-warning">Payment pending for this order</p>
+                            <a href="{% url 'make_payment' order.id %}" class="btn btn-primary">
+                                Make Payment
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Total Amount:</strong> <span class="price-text">₹{{ order.total_amount }}</span></p>
+                    {% if order.payment_status == 'Success' %}
+                        <p><strong>Payment Date:</strong> {{ order.payment_date|date:"F d, Y" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <h3 class="mb-4">Products</h3>
+        <div class="row">
+            {% for item in order_items %}
+            <div class="col-md-4 mb-4">
+                <div class="product-card">
+                    <div class="product-info">
+                        <h5>{{ item.product }}</h5>
+                        <p>Quantity: {{ item.quantity }}</p>
+                        <p>Price: <span class="price-text">₹{{ item.price }}</span></p>
+                        <p>Total: <span class="price-text">₹{{ item.get_total_price }}</span></p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="delivery-flow">
+            <h3 class="mb-4">Delivery Status</h3>
+            <div class="list-group">
+                {% for status in status_list %}
+                    <div class="flow-item {% if order.status == status %}active{% endif %}">
+                        {{ status }}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="status-timeline">
+            {% for status in status_timeline %}
+                <div class="timeline-item {% if status.active %}active{% endif %}">
+                    <div class="status-text">{{ status.status }}</div>
+                    {% if status.date %}
+                        <div class="status-date">{{ status.date|date:"Y-m-d H:i" }}</div>
+                    {% endif %}
+                    {% if status.show_payment_button %}
+                        <div class="payment-button mt-2">
+                            <a href="{% url 'make_payment' order.id %}" class="btn btn-primary btn-sm">
+                                Make Payment
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

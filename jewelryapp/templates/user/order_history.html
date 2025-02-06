@@ -1,0 +1,120 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+{% block content %}
+<style>
+    .order-history-container {
+        padding: 40px 20px;
+        background-color: #f8f9fa;
+    }
+
+    .order-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+        margin-bottom: 25px;
+        overflow: hidden;
+    }
+
+    .order-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .order-header {
+        background: linear-gradient(45deg, #2c3e50, #3498db);
+        color: white;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .status-badge {
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        font-weight: 500;
+    }
+
+    .status-pending { background-color: #ffd700; color: #000; }
+    .status-confirmed { background-color: #28a745; color: white; }
+    .status-processing { background-color: #17a2b8; color: white; }
+    .status-shipped { background-color: #007bff; color: white; }
+    .status-delivered { background-color: #28a745; color: white; }
+    .status-cancelled { background-color: #dc3545; color: white; }
+
+    .order-details {
+        padding: 20px;
+    }
+
+    .price-text {
+        color: #28a745;
+        font-weight: bold;
+        font-size: 1.2em;
+    }
+
+    .action-buttons {
+        padding: 15px;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-view-details {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-view-details:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        color: white;
+    }
+
+    .empty-orders {
+        text-align: center;
+        padding: 50px;
+        color: #6c757d;
+    }
+</style>
+
+<div class="order-history-container">
+    <div class="container">
+        <h2 class="mb-4">Order History</h2>
+        <div class="row">
+            {% for order in orders %}
+            <div class="col-md-6 mb-4">
+                <div class="order-card">
+                    <div class="order-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Order #{{ order.id }}</h5>
+                            <span class="status-badge status-{{ order.status|lower }}">
+                                {{ order.status }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="order-details">
+                        <p class="mb-2">Order Date: {{ order.order_date|date:"M d, Y" }}</p>
+                        <p class="mb-2">Payment Status: {{ order.payment_status }}</p>
+                        <p class="price-text mb-3">Total: ₹{{ order.total_amount }}</p>
+                    </div>
+                    <div class="action-buttons text-center">
+                        <a href="{% url 'order_detail' order.id %}" class="btn btn-view-details">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="empty-orders">
+                    <h3>No orders found</h3>
+                    <p>You haven't placed any orders yet.</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

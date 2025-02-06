@@ -1,0 +1,33 @@
+{% include 'admin/navbar.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">All Orders</h2>
+    {% if orders %}
+        <table class="table table-bordered mt-4">
+            <thead class="thead-light">
+                <tr>
+                    <!-- <th>Order ID</th> -->
+                    <th>User</th>
+                    <th>Total Price</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                    <tr>
+                        <!-- <td>{{ order.id }}</td> -->
+                        <td>{{ order.user.name }}</td>  <!-- Adjust based on your User model -->
+                        <td>Rs: {{ order.total_amount }}</td>
+                        <td>{{ order.status }}</td>
+                        <td>{{ order.delivery_date }}</td>  <!-- Adjust based on your Order model -->
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="text-warning">No orders found.</p>
+    {% endif %}
+</div>
+{% endblock %} 

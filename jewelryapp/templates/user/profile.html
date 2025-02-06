@@ -1,0 +1,165 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center text-primary mb-4">My Profile</h2>
+    <div class="card shadow-lg p-4 mb-4 border-0">
+        <h4 class="text-dark">{{ user.name }}</h4>
+        <p class="text-muted"><strong>Email:</strong> {{ user.login.email }}</p>
+        <p class="text-muted"><strong>Phone:</strong> {{ user.phone }}</p>
+        <p class="text-muted"><strong>Date of Birth:</strong> {{ user.dob }}</p>
+        <a href="{% url 'update_profile' %}" class="btn btn-primary mt-3">Update Profile</a>
+    </div>
+
+    <h3 class="text-secondary mt-5 mb-3">Addresses</h3>
+    <div class="mb-4">
+        {% for address in addresses %}
+        <div class="card shadow-sm p-3 mb-3 border-left-primary">
+            <h5 class="text-dark">{{ address.house_name }}</h5>
+            <p class="text-muted">{{ address.postal_address }}, {{ address.city }}</p>
+            <p class="text-muted">{{ address.district }}, {{ address.state }} - {{ address.pincode }}</p>
+        </div>
+        {% empty %}
+        <p class="text-warning">No addresses found.</p>
+        {% endfor %}
+        <a href="{% url 'update_profile' %}" class="btn btn-secondary mt-3">Add New Address</a>
+    </div>
+
+    <div class="card shadow-sm p-3 mb-3 border-left-info" onclick="window.location.href='{% url 'order_history' %}'" style="cursor: pointer;">
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-dark font-weight-bold">My Orders</span>
+            <span class="text-info font-weight-bold">&rarr;</span>
+        </div>
+    </div>
+
+    <div class="card shadow-sm p-3 mb-3 border-left-success" onclick="window.location.href='{% url 'booking_history' %}'" style="cursor: pointer;">
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-dark font-weight-bold">My Bookings</span>
+            <span class="text-success font-weight-bold">&rarr;</span>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm p-3 mb-3 border-left-success"
+     onclick="
+     {% if request.session.login_id %}
+         window.location.href='{% url 'view_old_gold_exchange' request.session.login_id %}';
+     {% else %}
+         document.getElementById('loginPromptModal').style.display = 'block';
+     {% endif %}"
+     style="cursor: pointer;">
+    <div class="d-flex justify-content-between align-items-center">
+        <span class="text-dark font-weight-bold">Old gold exchange</span>
+        <span class="text-success font-weight-bold">&rarr;</span>
+    </div>
+</div>
+
+<!-- Modal for Login Prompt -->
+<div id="loginPromptModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="document.getElementById('loginPromptModal').style.display='none'">&times;</span>
+        <p>Please log in to view your Old Gold Exchange details.</p>
+        <a href="{% url 'login' %}" class="btn btn-primary">Go to Login</a>
+    </div>
+</div>
+</div>
+<!-- Additional styling -->
+<style>
+    body {
+        font-family: 'Poppins', sans-serif; /* Modern font */
+        margin: 0;
+        padding: 20px;
+        background-color: #f8f9fa; /* Light background for contrast */
+    }
+
+    .container {
+        max-width: 900px; /* Limit the width of the container */
+        margin: 0 auto; /* Center the container */
+        padding: 20px;
+        background-color: #ffffff; /* White background for profile */
+        border-radius: 10px; /* Rounded corners */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Soft shadow */
+    }
+
+    h2 {
+        color: #343a40; /* Dark color for headings */
+        margin-bottom: 20px; /* Space below heading */
+        text-align: center; /* Center the heading */
+    }
+
+    .card {
+        background-color: #ffffff; /* White background for cards */
+        border: 1px solid #dee2e6; /* Light border */
+        border-radius: 10px; /* Rounded corners */
+        padding: 20px; /* Padding inside cards */
+        margin-bottom: 20px; /* Space between cards */
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Soft shadow */
+        transition: transform 0.2s; /* Smooth hover effect */
+    }
+
+    .card:hover {
+        transform: translateY(-5px); /* Lift effect on hover */
+    }
+
+    .text-dark {
+        color: #343a40; /* Dark text color */
+    }
+
+    .text-muted {
+        color: #6c757d; /* Muted text color */
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 10px 15px;
+        margin-top: 10px; /* Space above buttons */
+        font-size: 16px;
+        font-weight: bold;
+        color: white;
+        background-color: #007bff; /* Primary button color */
+        border: none;
+        border-radius: 5px; /* Rounded corners */
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s; /* Smooth transitions */
+        text-decoration: none;
+    }
+
+    .btn:hover {
+        background-color: #0056b3; /* Darker shade on hover */
+        transform: translateY(-2px); /* Lift effect on hover */
+    }
+
+    .mb-4 {
+        margin-bottom: 1.5rem; /* Space below elements */
+    }
+
+    .mt-5 {
+        margin-top: 3rem; /* Space above elements */
+    }
+
+    .border-left-primary {
+        border-left: 5px solid #007bff; /* Primary border color */
+    }
+
+    .border-left-info {
+        border-left: 5px solid #17a2b8; /* Info border color */
+    }
+
+    .border-left-success {
+        border-left: 5px solid #28a745; /* Success border color */
+    }
+
+    /* Responsive styles */
+    @media (max-width: 768px) {
+        .container {
+            padding: 15px; /* Less padding on smaller screens */
+        }
+
+        .btn {
+            width: 100%; /* Full width buttons on small screens */
+            margin: 5px 0; /* Space between buttons */
+        }
+    }
+</style>
+{% endblock %}

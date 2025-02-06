@@ -1,0 +1,110 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+{% block title %}
+  Ring Collection
+{% endblock title %}
+{% block content %}
+
+    <!-- Sidebar Filter Section -->
+    <div class="filters">
+        <h4>Filter by</h4>
+        <form method="get" action="{% url 'ring_list' %}">
+            <!-- Ring Size Filter -->
+            <div>
+                <h3>Ring Size:</h3>
+                {% for size in ring_sizes %}
+                    <label>
+                        <input type="checkbox" name="ring_size" value="{{ size }}"
+                            {% if size in selected_ring_sizes %}checked{% endif %}>
+                        {{ size }}
+                    </label><br>
+                {% endfor %}
+            </div>
+    
+            <br>
+            <!-- Ring Type Filter -->
+            <div>
+                <h3>Ring Type:</h3>
+                {% for type in ring_types %}
+                    <label>
+                        <input type="checkbox" name="ring_type" value="{{ type }}"
+                            {% if type in selected_ring_types %}checked{% endif %}>
+                        {{ type }}
+                    </label><br>
+                {% endfor %}
+            </div>
+    
+            <br>
+            <!-- Gemstone Filter -->
+            <div>
+                <h3>Gemstone:</h3>
+                {% for gem in gemstones %}
+                    <label>
+                        <input type="checkbox" name="stone_type" value="{{ gem }}"
+                            {% if gem in selected_gemstones %}checked{% endif %}>
+                        {{ gem }}
+                    </label><br>
+                {% endfor %}
+            </div>
+    
+            <br>
+            <!-- Material Type Filter -->
+            <div>
+                <h3>Material Type:</h3>
+                {% for mat in materials %}
+                    <label>
+                        <input type="checkbox" name="metal_type" value="{{ mat }}"
+                            {% if mat in selected_materials %}checked{% endif %}>
+                        {{ mat }}
+                    </label><br>
+                {% endfor %}
+            </div>
+    
+            <button type="submit">Filter</button>
+            <button type="button" class="button" onclick="window.location.href='/ring_list/'">Clear Filters</button>
+        </form>
+    </div>
+
+    <!-- Find Your Ring Size Button -->
+    <div class="text-center mt-4">
+        <button type="button" class="btn btn-primary" onclick="window.location.href='/find_ring_size/'">Find Your Ring Size</button>
+    </div>
+    
+    <!-- Main Product List Section -->
+    <div class="product-list">
+        <h2>Rings Collection</h2>
+        <div class="row">
+            {% if rings %}
+                {% for ring in rings %}
+                    <div class="product" data-ringsize="{{ ring.ring_size }}" data-ringtype="{{ ring.ring_type }}" data-gemstone="{{ ring.stone_type }}" data-material="{{ ring.metal_type }}">
+                        {% if ring.images %}
+                        <img src="{{ ring.images.url }}" alt="{{ ring.product_name }}">
+                        {% else %}
+                        <img src="{% static 'default_image.jpg' %}" alt="No Image Available">
+                        {% endif %}
+                        <h5>{{ ring.product_name }}</h5>
+                        <p><strong>Price:</strong> Rs:{{ ring.price }}</p>
+                        <a href="{% url 'ring_detail' ring.product_id %}" class="button">View Details</a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-center">No rings available at the moment.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <style>
+        .circle-placeholder {
+            width: 200px;
+            height: 200px;
+            background-color: #f0f0f0;
+            border-radius: 50%;
+            margin: 10px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+    
+    {% endblock content %}

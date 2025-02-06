@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update or Cancel Store Visit</title>
+</head>
+<body>
+    <h1>Update or Cancel Store Visit</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        <label for="phone">Phone:</label>
+        <input type="text" id="phone" name="phone" value="{{ store_visit.phone }}"><br><br>
+        
+        <label for="date">Date:</label>
+        <input type="date" id="date" name="date" value="{{ store_visit.date }}"><br><br>
+        
+        <label for="time">Time:</label>
+        <input type="time" id="time" name="time" value="{{ store_visit.time }}"><br><br>
+        
+        <button type="submit" name="update">Update</button>
+        <button type="submit" name="cancel" style="background-color: red; color: white;">Cancel</button>
+    </form>
+</body>
+</html>

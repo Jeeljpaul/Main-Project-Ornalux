@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Product</title>
+    
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* General Styles */
+        body {
+            background-color: #f4f4f4; /* Light background for contrast */
+            font-family: 'Poppins', sans-serif;
+        }
+
+        #page-content-wrapper {
+            padding: 20px;
+        }
+
+        /* Product List Styling */
+        .product-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .product {
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative; /* For positioning the limited stock label */
+            overflow: hidden; /* To contain the limited stock label */
+        }
+
+        .product:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .product img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .product h2 {
+            font-size: 1.5rem;
+            color: #333;
+            margin: 10px 0;
+        }
+
+        .product p {
+            color: #666;
+            font-size: 1rem;
+            margin: 8px 0;
+        }
+
+        /* Limited Stock Label */
+        .limited-stock {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: #ffcc00; /* Yellow background */
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            z-index: 1; /* Ensure it appears above other elements */
+        }
+
+        /* Button Group Styles */
+        .button-group {
+            display: flex;
+            justify-content: space-between; /* Space between buttons */
+            margin-top: 15px;
+        }
+
+        .button {
+            background-color: #007bff; /* Primary button color */
+            color: white;
+            padding: 10px 15px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            width: 48%; /* Ensure buttons take up equal space */
+            margin: 0 1%; /* Add margin to prevent overlap */
+        }
+
+        .button:hover {
+            background-color: #0056b3; /* Darker shade on hover */
+            transform: translateY(-2px); /* Lift effect on hover */
+        }
+
+        /* Disable Button Styles */
+        .disable-button {
+            background-color: #6c757d;
+        }
+
+        .disable-button.btn-danger {
+            background-color: #dc3545;
+        }
+
+        .disable-button.btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .disable-button.btn-success {
+            background-color: #28a745;
+        }
+
+        .disable-button.btn-success:hover {
+            background-color: #218838;
+        }
+
+        /* No products message */
+        .product-list p {
+            color: #999;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        /* Add your styles here */
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            max-width: 700px;
+            margin: 60px auto;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        #sidebar-wrapper .sidebar-heading {
+            padding: 1rem;
+            font-size: 1.5rem;
+            background-color: #212529; /* Darker heading for contrast */
+            color: #fff;
+            text-align: center;
+        }
+
+        .navbar {
+            padding-left: 0;
+        }
+
+        .navbar-light {
+            background-color: #e9ecef; /* Light navbar background */
+        }
+
+        /* Restock Button Styles */
+        .restock-button {
+            background-color: #28a745; /* Green background for restock */
+            color: white;
+            padding: 10px 15px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-bottom: 10px; /* Space below the button */
+        }
+
+        .restock-button:hover {
+            background-color: #218838; /* Darker green on hover */
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="d-flex" id="wrapper">
+    <div class="bg-light border-right" id="sidebar-wrapper">
+        <div class="sidebar-heading">Ornalux Admin</div>
+        <form method="get" action="{% url 'product_list' %}">
+            <div>
+                <h3>Filter by Category:</h3><br>
+                {% for category in categories %}
+                    <label>
+                        <input type="checkbox" name="category" value="{{ category }}" 
+                        {% if category in selected_category %}checked{% endif %}>
+                        {{ category }}
+                    </label><br>
+                {% endfor %}
+            </div>
+            <div>
+                <h3>Gemstone:</h3>
+                {% for gem in gemstones %}
+                    <label>
+                        <input type="checkbox" name="stone_type" value="{{ gem }}"
+                            {% if gem in selected_gemstones %}checked{% endif %}>
+                        {{ gem }}
+                    </label><br>
+                {% endfor %}
+            </div>
+            <div>
+                <h3>Material Type:</h3>
+                {% for mat in materials %}
+                    <label>
+                        <input type="checkbox" name="metal_type" value="{{ mat }}"
+                            {% if mat in selected_materials %}checked{% endif %}>
+                        {{ mat }}
+                    </label><br>
+                {% endfor %}
+            </div>
+            <button type="submit">Filter</button>
+            <button type="button" class="button" onclick="window.location.href='/product_list/'">Clear Filters</button>
+        </form>
+    </div>
+
+
+
+
+    <!-- Page Content -->
+    <div id="page-content-wrapper">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/adminhome/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+
+        <!-- Product List -->
+        <div class="product-list">
+            {% for product in products %}
+                <div class="product" data-category="{{ product.category }}" data-price="{{ product.price }}" data-weight="{{ product.weight }}" data-metal_type="{{ product.metal_type }}" data-gemstone_type="{{ product.gemstone_type }}">
+                    {% if product.stock_quantity < 5 %}
+                        <div class="limited-stock">Limited Stock</div>
+                        <button class="restock-button" onclick="sendRestockRequest({{ product.product_id }})">Restock</button>
+                    {% endif %}
+                    <img src="{{ product.images.url }}" alt="{{ product.product_name }}">
+                    <h2>{{ product.product_name }}</h2>
+                    <p>Price: ${{ product.price }}</p>
+                    <p>Weight: {{ product.weight }}g</p>
+                    <div class="button-group">
+                        <button class="button" onclick="window.location.href='{% url 'update_pro' product.product_id %}'">Update</button>
+                        <form action="{% url 'toggle_product_status' product.product_id %}" method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="{% if product.is_active %}deactivate{% else %}activate{% endif %}">
+                            <button type="submit" class="button disable-button {% if product.is_active %}btn-danger{% else %}btn-success{% endif %}">
+                                {% if product.is_active %}Deactivate{% else %}Activate{% endif %}
+                            </button>
+                        </form>
+                        <button class="button" onclick="sendCancelOrderRequest({{ product.product_id }})">Cancel Order</button>
+                    </div>
+                </div>
+            {% empty %}
+                <p>No products available.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Restock Quantity Modal -->
+<div class="modal fade" id="restockModal" tabindex="-1" role="dialog" aria-labelledby="restockModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="restockModalLabel">Restock Product</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <label for="restockQuantity">Enter Quantity:</label>
+                <input type="number" id="restockQuantity" class="form-control" min="1" required>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="confirmRestock">Request Restock</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load jQuery first -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+<!-- Then load Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- Then your custom scripts -->
+<script>
+function preventBack() {
+    history.pushState(null, null, location.href);
+    window.addEventListener('popstate', function (event) {
+        history.pushState(null, null, location.href);
+    });
+}
+
+window.onload = preventBack;
+
+function sendRestockRequest(productId) {
+    if (!productId) {
+        console.error('Product ID is undefined');
+        alert('Error: Product ID is missing');
+        return;
+    }
+
+    // Show the modal
+    $('#restockModal').modal('show');
+
+    // Handle the confirm restock button click
+    document.getElementById('confirmRestock').onclick = function() {
+        const quantity = document.getElementById('restockQuantity').value;
+
+        if (!quantity || quantity <= 0) {
+            alert('Please enter a valid quantity.');
+            return;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        fetch(`/vendor/products/${productId}/restock/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ requested_quantity: quantity })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Restock request sent to the vendor successfully!');
+                $('#restockModal').modal('hide');
+            } else {
+                alert('Error sending restock request: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to send restock request. Please try again.');
+        });
+    };
+}
+
+function sendCancelOrderRequest(productId) {
+    if (!productId) {
+        console.error('Product ID is undefined');
+        alert('Error: Product ID is missing');
+        return;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+
+    fetch(`/vendor/products/${productId}/cancel/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert('Order cancelled successfully!');
+        } else {
+            alert('Error cancelling order: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to cancel order. Please try again.');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+</body>
+</html>

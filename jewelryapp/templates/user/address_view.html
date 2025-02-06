@@ -1,0 +1,107 @@
+{% load static %}
+{% include 'user/trial.html' %}
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Address</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <style>
+        .address-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: #f8f9fa;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .address-title {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .address-item {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .address-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .address-item input[type="radio"] {
+            margin-right: 15px;
+        }
+
+        .address-item label {
+            margin-bottom: 0;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .button-group {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .btn-continue {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 25px;
+            margin-right: 10px;
+        }
+
+        .btn-add-new {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 25px;
+        }
+
+        .btn-continue:hover, .btn-add-new:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="address-container">
+        <h2 class="address-title">Select a Delivery Address</h2>
+        <form method="post" action="{% url 'select_address' %}">
+            {% csrf_token %}
+            <div class="address-list">
+                {% for address in addresses %}
+                <div class="address-item">
+                    <label>
+                        <input type="radio" name="selected_address" value="{{ address.id }}" required>
+                        <strong>{{ address.house_name }}</strong><br>
+                        {{ address.postal_address }}<br>
+                        {{ address.city }}, {{ address.district }}<br>
+                        {{ address.state }} - {{ address.pincode }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="button-group">
+                <button type="submit" class="btn btn-continue">Continue</button>
+                <a href="{% url 'add_address' %}" class="btn btn-add-new">Add New Address</a>
+            </div>
+        </form>
+    </div>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+</body>
+</html>

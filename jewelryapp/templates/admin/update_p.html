@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Product</title>
+    <script type="text/javascript">
+        // Function to disable the back button
+        function preventBack() {
+            history.pushState(null, null, location.href); // Add a new state to the history
+            window.addEventListener('popstate', function (event) {
+                history.pushState(null, null, location.href); // Keep adding a new state to block the back action
+            });
+        }
+
+        // Call the function to prevent back navigation
+        window.onload = preventBack;
+    </script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Add your styles here */
+        body {
+            background-color: #e9ecef;
+            font-family: 'Poppins', sans-serif;
+        }
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            max-width: 700px;
+            margin: 60px auto;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.875rem;
+        }
+        
+        #sidebar-wrapper .sidebar-heading {
+            padding: 1rem;
+            font-size: 1.5rem;
+            background-color: #212529; /* Darker heading for contrast */
+            color: #fff;
+            text-align: center;
+        }
+
+        .list-group-item {
+            border: none;
+            background-color: transparent;
+            color: #0a0a0a; /* Light text color */
+        }
+
+        .list-group-item:hover, .list-group-item:focus {
+            background-color: #495057; /* Darker hover effect */
+            color: #fff;
+        }
+
+        #page-content-wrapper {
+            width: 100vw;
+            padding: 20px;
+        }
+
+        .navbar {
+            padding-left: 0;
+        }
+
+        .navbar-light {
+            background-color: #e9ecef; /* Light navbar background */
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="d-flex" id="wrapper">
+    <div class="bg-light border-right" id="sidebar-wrapper">
+        <div class="sidebar-heading">Ornalux Admin</div>
+        <div class="list-group list-group-flush">
+            <!-- Manage Users -->
+            <div class="dropdown">
+                <a class="list-group-item list-group-item-action bg-light dropdown-toggle" href="#" id="usersDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Manage Users
+                </a>
+                <div class="dropdown-menu" aria-labelledby="usersDropdown">
+                    <a class="dropdown-item" href="/view_registered_users/">View Registered Users</a>
+                </div>
+            </div>
+
+            <!-- Manage Staff -->
+            <div class="dropdown">
+                <a class="list-group-item list-group-item-action bg-light dropdown-toggle" href="#" id="staffDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Manage Staff
+                </a>
+                <div class="dropdown-menu" aria-labelledby="staffDropdown">
+                    <a class="dropdown-item" href="{% url 'view_staff' %}">View Staff</a>
+                    <a class="dropdown-item" href="{% url 'add_staff' %}">Add Staff</a>
+                </div>
+            </div>
+
+            <!-- Manage Products -->
+            <div class="dropdown">
+                <a class="list-group-item list-group-item-action bg-light dropdown-toggle" href="#" id="productsDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Manage Products
+                </a>
+                <div class="dropdown-menu" aria-labelledby="productsDropdown">
+                    <a class="dropdown-item" href="product_list/">View Products</a>
+                    <a class="dropdown-item" href="{% url 'add_pro' %}">Add Product</a>
+                    <a class="dropdown-item" href="{% url 'add_category' %}">Add Category</a>
+                    <a class="dropdown-item" href="{% url 'add_metaltype' %}">Add Metal Type</a>
+                    <a class="dropdown-item" href="{% url 'add_stonetype' %}">Add Stone Type</a>
+                </div>
+            </div>
+
+            <!-- View Order Details -->
+            <a href="#" class="list-group-item list-group-item-action bg-light">View Orders</a>
+
+            <!-- View Payment Details -->
+            <a href="#" class="list-group-item list-group-item-action bg-light">View Payments</a>
+
+            <!-- View Return Details -->
+            <a href="#" class="list-group-item list-group-item-action bg-light">View Return Details</a>
+
+            <!-- View Booking Schedule -->
+            <a href="#" class="list-group-item list-group-item-action bg-light">View Booking Schedule</a>
+
+            <!-- Manage Feedback and Reviews -->
+            <a href="#" class="list-group-item list-group-item-action bg-light">Manage Feedback & Reviews</a>
+
+        </div>
+    </div>
+
+    <!-- Page Content -->
+    <div id="page-content-wrapper">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="/adminhome/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <div class="container">
+            <h2>Update Product</h2>
+            <form method="POST" action="{% url 'update_pro' product.product_id %}" onsubmit="validateForm(event)" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id_product_name">Product Name</label>
+                    <input type="text" class="form-control" id="id_product_name" name="product_name" value="{{ product.product_name }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="id_category">Category</label>
+                    <select class="form-control" id="id_category" name="id_category" onchange="loadAttributes()" required>
+                        <option value="">Select a category</option>
+                        {% for category in categories %}
+                            <option value="{{ category.category_id }}" {% if category.id == product.category.catgeory_id %}selected{% endif %}>{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+    
+                <div id="attributes-container">
+                    <!-- Attributes will be dynamically loaded here based on the category -->
+                </div>
+    
+                <div class="form-group">
+                    <label for="id_price">Price</label>
+                    <input type="text" class="form-control" id="id_price" name="price" value="{{ product.price }}" required>
+                </div>
+    
+                <div class="form-group">
+                    <label for="id_stock_quantity">Stock Quantity</label>
+                    <input type="number" class="form-control" id="id_stock_quantity" name="stock_quantity" value="{{ product.stock_quantity }}" required>
+                </div>
+    
+                <div class="form-group">
+                    <label for="id_weight">Weight</label>
+                    <input type="number" class="form-control" id="id_weight" name="weight" value="{{ product.weight }}" required>
+                </div>
+    
+                <div class="form-group">
+                    <label for="id_product_description">Description</label>
+                    <textarea class="form-control" id="id_product_description" name="product_description" required>{{ product.product_description }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_metaltype">Metal Type</label>
+                    <select class="form-control" id="id_metaltype" name="metaltype" required>
+                        <option value="">Select Metal Type</option>
+                        {% for metaltype in metaltypes %}
+                            <option value="{{ metaltype.metaltype_id }}" 
+                                {% if metaltype.metaltype_id == product.metaltype.metaltype_id %}selected{% endif %}>
+                                {{ metaltype.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_vendor">Vendor</label>
+                    <select class="form-control" id="id_vendor" name="vendor" required>
+                        <option value="">Select a vendor</option>
+                        {% for vendor in vendors %}
+                            <option value="{{ vendor.vendor_id }}" {% if vendor.vendor_id == product.vendor.vendor_id %}selected{% endif %}>{{ vendor.business_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+            <div class="form-group">
+                <label for="id_stonetype">Stone Type </label>
+                <select class="form-control" id="id_stonetype" name="stonetype">
+                    <option value="">Select Stone Type</option>
+                    {% for stonetype in stonetypes %}
+                    <option value="{{ stonetype.stonetype_id }}" 
+                    {% if stonetype.stonetype_id == product.stonetype.stonetype_id %}selected{% endif %}>
+                    {{ stonetype.name }}
+                </option>                   
+                {% endfor %}
+                </select>
+            </div>
+
+
+            <div class="form-group">
+                <label for="id_gender">Gender <span class="required">*</span></label>
+                <select class="form-control" id="id_gender" name="gender" required>
+                    <option value="">Select Gender</option>
+                    <option value="Men" {% if product.gender == "Men" %}selected{% endif %}>Men</option>
+                    <option value="Women" {% if product.gender == "Women" %}selected{% endif %}>Women</option>
+                    <option value="Unisex" {% if product.gender == "Unisex" %}selected{% endif %}>Unisex</option>
+                    <option value="Kid" {% if product.gender == "Kid" %}selected{% endif %}>Kid</option>
+                    <option value="Baby" {% if product.gender == "Baby" %}selected{% endif %}>Baby</option>
+                </select>
+            </div>
+                
+
+            <div class="form-group">
+                <label for="id_delivery_options">Delivery Options</label><br>
+            
+                <input type="checkbox" id="id_delivery_options_home" name="delivery_options[]" value="Home Delivery"
+                    {% if product.home_delivery %}checked{% endif %}>
+                Home Delivery<br>
+            
+                <input type="checkbox" id="id_delivery_options_store" name="delivery_options[]" value="Store Pickup"
+                    {% if product.store_pickup %}checked{% endif %}>
+                Store Pickup<br>
+            
+                <input type="checkbox" id="id_delivery_options_try" name="delivery_options[]" value="Try at Home"
+                    {% if product.try_at_home %}checked{% endif %}>
+                Try at Home<br>
+            </div>
+
+            
+            <div class="form-group">
+                <label for="id_bestselling">Bestselling Item</label><br>
+                <input type="checkbox" id="id_bestselling" name="bestselling" value="Yes" 
+                       {% if product.bestselling %}checked{% endif %}>
+                Mark as Bestselling
+            </div>
+            
+
+
+                <div class="form-group">
+                    <label for="id_image">Image</label>
+                    
+                    <!-- Display the current image if it exists -->
+                    {% if product.images %}
+                        <div>
+                            <img src="{{ product.images.url }}" alt="Current Image" style="max-width: 150px; max-height: 150px;">
+                        </div>
+                    {% endif %}
+                    
+                    <!-- File input field to upload a new image -->
+                    <input type="file" class="form-control" id="id_image" name="image">
+                </div>
+                
+                
+    
+                <button type="submit">Update Product</button>
+    
+                <div id="error-messages"></div>
+            </form>
+        </div>
+    
+        <script>
+            function loadAttributes() {
+                const categoryId = document.getElementById('id_category').value;
+                if (!categoryId) {
+                    $('#attributes-container').html('<p style="color:red;">Please select a category to load its attributes.</p>');
+                    return;
+                }
+    
+                $.ajax({
+                    url: `/get_category_attributes/${categoryId}/`,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function (response) {
+                        displayAttributes(response);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error fetching category attributes:', error);
+                        $('#attributes-container').html('<p style="color:red;">Error fetching attributes. Please try again.</p>');
+                    }
+                });
+            }
+    
+            function displayAttributes(data) {
+                const attributesContainer = $('#attributes-container');
+                attributesContainer.empty();
+    
+                if (data && data.attributes && data.attributes.length > 0) {
+                    let attributesHtml = '';
+                    data.attributes.forEach(function (attribute) {
+                        attributesHtml += `
+                            <div class="form-group">
+                                <label>${attribute.name}</label>
+                                <input type="text" class="form-control" name="attribute_${attribute.id}" value="${attribute.value || ''}" />
+                                <input type="hidden" name="attributes" value="${attribute.id}" />
+                            </div>
+                        `;
+                    });
+                    attributesContainer.html(attributesHtml);
+                } else {
+                    attributesContainer.html('<p>No attributes found for this category.</p>');
+                }
+            }
+    
+            $(document).ready(function () {
+                // Load attributes for the initial product category on page load
+                loadAttributes();
+            });
+        </script>
+
+</body>
+</html>

@@ -1,0 +1,1274 @@
+{% load static %}
+{% include 'user/trial.html' %}
+{% csrf_token %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar for Filters -->
+        <div class="col-md-3 sidebar">
+            <!-- <h2 class="filter-heading text-center">Filters</h2> -->
+            <form method="GET" action="{% url 'allproducts' %}" id="filter-form">
+                <!-- Search Bar -->
+                <div class="search-container">
+                    <div class="search-wrapper">
+                        <input type="text" 
+                               id="search-box" 
+                               name="search" 
+                               placeholder="Search for jewelry..." 
+                               value="{{ request.GET.search }}" 
+                               class="form-control" 
+                               autocomplete="off"/>
+                        <button class="camera-btn" onclick="triggerImageUpload(event)">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                        <!-- Hidden file input for image upload -->
+                        <input type="file" 
+                               id="image-upload" 
+                               accept="image/*" 
+                               style="display: none;" 
+                               onchange="handleImageUpload(event)">
+                    </div>
+                    <div id="suggestions-list" class="suggestions-list"></div>
+                </div>
+                <!-- Category Filter -->
+                <div class="filter-section mb-3">
+                    <h5 class="filter-subheading">Category</h5>
+                    <select name="category" id="category-select" class="form-control">
+                        <option value="">Select Category</option>
+                        {% for category in categories %}
+                            <option value="{{ category.category_id }}" 
+                                    {% if category.category_id|stringformat:"s" == selected_category %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Metal Type Filter -->
+                <div class="filter-section mb-3">
+                    <h5 class="filter-subheading">Metal Type</h5>
+                    <ul>
+                        {% for metal in metaltypes %}
+                        <li>
+                            <input type="checkbox" name="metaltype" value="{{ metal.metaltype_id }}" 
+                                   {% if metal.metaltype_id|stringformat:"s" in request.GET.metaltype %}checked{% endif %}> 
+                            {{ metal.name }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Stone Type Filter -->
+                <div class="filter-section mb-3">
+                    <h5 class="filter-subheading">Stone Type</h5>
+                    <ul>
+                        {% for stone in stonetypes %}
+                        <li>
+                            <input type="checkbox" name="stonetype" value="{{ stone.stonetype_id }}" 
+                                   {% if stone.stonetype_id|stringformat:"s" in request.GET.stonetype %}checked{% endif %}> 
+                            {{ stone.name }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Gender Filter -->
+                <div class="filter-section mb-3">
+                    <h5 class="filter-subheading">Gender</h5>
+                    <ul>
+                        {% for gender_choice, gender_display in product_gender_choices %}
+                        <li>
+                            <input type="checkbox" name="gender" value="{{ gender_choice }}" 
+                                   {% if gender_choice in request.GET.gender %}checked{% endif %}> 
+                            {{ gender_display }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Try at Home Filter -->
+                <div class="filter-section mb-3">
+                    <h5 class="filter-subheading">Try at Home</h5>
+                    <input type="checkbox" name="try_at_home" value="true" {% if request.GET.try_at_home %}checked{% endif %}> 
+                    Try at Home Available
+                </div>
+
+                <!-- Filter Buttons -->
+                <button type="submit" class="btn btn-primary w-100 mb-2">Apply Filters</button>
+                <button type="button" class="btn btn-danger w-100 clear-btn" onclick="window.location.href='{% url 'allproducts' %}'">Clear Filters</button>
+            </form>
+        </div>
+
+        <!-- Product List -->
+        <div class="product-list">
+            <!-- Search Container -->
+            <!-- <div class="search-container">
+                <input type="text" id="search-box" name="search" 
+                       placeholder="Search for jewelry..." 
+                       value="{{ request.GET.search }}" 
+                       class="form-control" 
+                       autocomplete="off"/>
+                <ul id="suggestions-list"></ul>
+            </div> -->
+
+            <!-- Products Grid -->
+            <div class="row products-grid">
+                {% for product in products %}
+                <div class="col-md-4 col-sm-6 mb-4">
+                    <div class="product-card" onclick="window.location.href='{% url 'detail' product.product_id %}'">
+                        <div class="product-image">
+                            <img src="{{ product.images.url }}" alt="{{ product.product_name }}">
+                            <button class="wishlist-btn" onclick="addToWishlist(event, {{ product.product_id }})">
+                                {% if product.product_id in wishlist_items %}
+                                    <i class="fas fa-heart" style="color: red;"></i>
+                                {% else %}
+                                    <i class="far fa-heart"></i>
+                                {% endif %}
+                            </button>
+                            <button class="share-btn" onclick="toggleShareOptions(event, {{ product.product_id }})">
+                                <i class="fas fa-share-alt"></i>
+                            </button>
+                            <div id="share-options-{{ product.product_id }}" class="share-options">
+                                <div class="share-option whatsapp" 
+                                     onclick="shareOnWhatsApp(event, '{{ product.images.url }}', '{{ product.product_name }}', {{ product.product_id }})">
+                                    <i class="fab fa-whatsapp"></i> WhatsApp
+                                </div>
+                                <div class="share-option instagram" 
+                                     onclick="shareOnInstagram(event, '{{ product.images.url }}', '{{ product.product_name }}', {{ product.product_id }})">
+                                    <i class="fab fa-instagram"></i> Instagram
+                                </div>
+                            </div>
+                        </div>
+                        <div class="product-info">
+                            <h5>{{ product.product_name }}</h5>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- JavaScript to dynamically reload attributes when category is changed -->
+        <script>
+            document.getElementById('category-select').addEventListener('change', function() {
+                document.getElementById('filter-form').submit();
+            });
+        </script>
+
+        <!-- New CSS Styling -->
+        <style>
+            .container-fluid {
+                padding: 30px;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                min-height: 100vh;
+            }
+
+            .search-container {
+                position: relative;
+                margin-bottom: 40px;
+                padding: 20px;
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                transition: transform 0.3s ease;
+            }
+
+            .search-container:hover {
+                transform: translateY(-2px);
+            }
+
+            .search-wrapper {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+
+            #search-box {
+                width: 100%;
+                padding: 15px 50px 15px 20px;
+                font-size: 16px;
+                border: 2px solid #e1e1e1;
+                border-radius: 50px;
+                background: #f8f9fa;
+                transition: all 0.3s ease;
+            }
+
+            #search-box:focus {
+                border-color: #4a90e2;
+                box-shadow: 0 0 20px rgba(74, 144, 226, 0.2);
+                background: white;
+            }
+
+            #search-box::placeholder {
+                color: #adb5bd;
+                font-weight: 300;
+            } 
+
+            
+            .suggestions-list {
+    position: absolute; /* Position it below the input */
+    background-color: white; /* Background color */
+    border: 1px solid #ccc; /* Border for the dropdown */
+    border-radius: 4px; /* Rounded corners */
+    max-height: 200px; /* Maximum height */
+    overflow-y: auto; /* Scroll if too many suggestions */
+    z-index: 1000; /* Ensure it appears above other elements */
+    width: calc(100% - 2px); /* Full width minus border */
+    list-style-type: none; /* Remove bullet points */
+    padding: 0; /* Remove padding */
+    margin: 0; /* Remove margin */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Add shadow for depth */
+}
+
+            /* Style for each suggestion item */
+.suggestions-list div {
+    padding: 10px; /* Padding for each item */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s; /* Smooth background transition */
+}
+
+/* Hover effect for suggestion items */
+.suggestions-list div:hover {
+    background-color: #f0f0f0; /* Light gray background on hover */
+}
+
+/* Style for the highlighted suggestion */
+.suggestions-list div.highlight {
+    background-color: #e0e0e0; /* Slightly darker gray for highlighted */
+}
+
+            /* Sidebar Styling - Enhanced */
+            .sidebar {
+                background: white;
+                padding: 30px;
+                border-radius: 20px;
+                position: fixed;
+                height: calc(100vh - 60px);
+                overflow-y: auto;
+                width: 22%;
+                box-shadow: 5px 0 30px rgba(0, 0, 0, 0.05);
+            }
+
+            .filter-section {
+                margin-bottom: 30px;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+                padding-bottom: 25px;
+            }
+
+            .filter-section h5 {
+                color: #2d3436;
+                font-weight: 600;
+                margin-bottom: 20px;
+                font-size: 1.1rem;
+                letter-spacing: 0.5px;
+            }
+
+            .filter-section ul li {
+                margin-bottom: 15px;
+                transition: all 0.3s ease;
+            }
+
+            .filter-section ul li:hover {
+                transform: translateX(5px);
+            }
+
+            /* Custom Checkbox Styling */
+            .filter-section input[type="checkbox"] {
+                appearance: none;
+                -webkit-appearance: none;
+                width: 20px;
+                height: 20px;
+                border: 2px solid #4a90e2;
+                border-radius: 5px;
+                margin-right: 10px;
+                position: relative;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .filter-section input[type="checkbox"]:checked {
+                background-color: #4a90e2;
+            }
+
+            .filter-section input[type="checkbox"]:checked::after {
+                content: '✓';
+                color: white;
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 12px;
+            }
+
+            /* Product List Styling - Enhanced */
+            .product-list {
+                margin-left: 24%;
+                padding: 0 20px;
+            }
+
+            .products-grid {
+                margin-top: 20px;
+            }
+
+            .product-card {
+                background: white;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                margin-bottom: 30px;
+                position: relative;
+            }
+
+            .product-card:hover {
+                transform: translateY(-10px);
+                box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            }
+
+            .product-image {
+                position: relative;
+                padding-top: 100%;
+                overflow: hidden;
+                background: #f8f9fa;
+            }
+
+            .product-image img {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transition: transform 0.6s ease;
+            }
+
+            .product-card:hover .product-image img {
+                transform: scale(1.1) rotate(2deg);
+            }
+
+            .wishlist-btn {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: rgba(255, 255, 255, 0.9);
+                border: none;
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                z-index: 2;
+            }
+
+            .wishlist-btn:hover {
+                transform: scale(1.1) rotate(5deg);
+                background: #fff5f5;
+            }
+
+            .wishlist-btn i {
+                color: #ff4757;
+                font-size: 20px;
+                transition: all 0.3s ease;
+            }
+
+            .product-info {
+                padding: 25px;
+                text-align: center;
+                position: relative;
+            }
+
+            .product-info::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 20px;
+                right: 20px;
+                height: 1px;
+                background: linear-gradient(to right, transparent, #e1e1e1, transparent);
+            }
+
+            .product-info h5 {
+                margin: 0;
+                font-size: 1.2rem;
+                font-weight: 600;
+                color: #2d3436;
+                line-height: 1.4;
+            }
+
+            /* Button Styling */
+            .btn {
+                padding: 15px 30px;
+                border-radius: 50px;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                transition: all 0.3s ease;
+            }
+
+            .btn-primary {
+                background: linear-gradient(45deg, #4a90e2, #67a6e6);
+                border: none;
+                box-shadow: 0 5px 15px rgba(74, 144, 226, 0.3);
+            }
+
+            .btn-primary:hover {
+                background: linear-gradient(45deg, #3780d8, #5999e2);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(74, 144, 226, 0.4);
+            }
+
+            .btn-danger {
+                background: linear-gradient(45deg, #ff4757, #ff6b81);
+                border: none;
+                box-shadow: 0 5px 15px rgba(255, 71, 87, 0.3);
+            }
+
+            .btn-danger:hover {
+                background: linear-gradient(45deg, #ff3347, #ff5a72);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(255, 71, 87, 0.4);
+            }
+
+            /* Responsive Design */
+            @media (max-width: 1200px) {
+                .sidebar {
+                    width: 25%;
+                }
+                .product-list {
+                    margin-left: 27%;
+                }
+            }
+
+            @media (max-width: 992px) {
+                .sidebar {
+                    width: 30%;
+                }
+                .product-list {
+                    margin-left: 32%;
+                }
+            }
+
+            @media (max-width: 768px) {
+                .container-fluid {
+                    padding: 15px;
+                }
+                .sidebar {
+                    display: none;
+                }
+                .product-list {
+                    margin-left: 0;
+                }
+                .search-container {
+                    margin-bottom: 20px;
+                }
+                #search-box {
+                    padding: 15px 25px;
+                    font-size: 16px;
+                }
+            }
+
+            @media (max-width: 576px) {
+                .product-card {
+                    margin-bottom: 20px;
+                }
+                .product-info h5 {
+                    font-size: 1rem;
+                }
+            }
+            /* Share button styling */
+.share-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    z-index: 2;
+}
+
+.share-btn:hover {
+    transform: scale(1.1);
+    background: #f8f9fa;
+}
+
+/* Share options dropdown */
+.share-options {
+    display: none;
+    position: absolute;
+    top: 70px;
+    left: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    width: 150px;
+    padding: 8px 0;
+}
+
+.share-options.show {
+    display: block;
+}
+
+.share-option {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.share-option:hover {
+    background-color: #f8f9fa;
+}
+
+.share-option i {
+    font-size: 18px;
+}
+
+/* Platform-specific colors */
+.share-option.whatsapp i {
+    color: #25D366;
+}
+
+.share-option.instagram i {
+    color: #E4405F;
+}
+
+/* Camera button styles */
+.camera-btn {
+    position: absolute;
+    right: 15px;
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+}
+
+.camera-btn:hover {
+    background: #f0f0f0;
+}
+
+.camera-btn i {
+    font-size: 18px;
+    color: #666;
+}
+
+/* Loading animation for image upload */
+.camera-btn.loading {
+    pointer-events: none;
+}
+
+.camera-btn.loading i {
+    animation: rotating 2s linear infinite;
+}
+
+@keyframes rotating {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Modal styles for image preview */
+.image-preview-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-preview-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 90%;
+    max-height: 90%;
+    overflow: auto;
+    position: relative;
+}
+
+.image-preview-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.preview-image {
+    max-width: 100%;
+    max-height: 70vh;
+    display: block;
+    margin: 0 auto;
+}
+
+.preview-controls {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.preview-controls button {
+    margin: 0 10px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.preview-controls .search-btn {
+    background: #4a90e2;
+    color: white;
+}
+
+.preview-controls .cancel-btn {
+    background: #e74c3c;
+    color: white;
+}
+
+.no-results {
+    text-align: center;
+    padding: 40px 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    margin: 20px auto;
+    max-width: 600px;
+}
+
+.no-results i {
+    font-size: 48px;
+    color: #ccc;
+    margin-bottom: 20px;
+}
+
+.no-results h3 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.no-results p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.similarity-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 2;
+}
+
+.high-match {
+    background-color: #28a745;
+    color: white;
+}
+
+.moderate-match {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.product-card {
+    position: relative;
+    transition: transform 0.3s ease;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+}
+
+.product-image {
+    position: relative;
+    overflow: hidden;
+    padding-top: 100%; /* 1:1 Aspect Ratio */
+}
+
+.product-image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.product-image:hover img {
+    transform: scale(1.05);
+}
+
+.product-actions {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.product-info {
+    padding: 15px;
+}
+
+.product-title {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+    line-height: 1.4;
+}
+
+.product-price {
+    font-weight: bold;
+    color: #e44d26;
+    margin: 10px 0;
+}
+
+.product-category {
+    display: inline-block;
+    padding: 3px 8px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    font-size: 12px;
+    color: #666;
+}
+
+/* Loading Animation */
+.loading-results {
+    text-align: center;
+    padding: 40px;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .product-card {
+        margin-bottom: 20px;
+    }
+    
+    .no-results {
+        margin: 10px;
+        padding: 20px;
+    }
+}
+
+        </style>
+
+        <!-- Add this JavaScript for wishlist functionality -->
+        <script>
+        function addToWishlist(event, productId) {
+            event.stopPropagation(); // Prevent card click event
+            const btn = event.currentTarget;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            $.ajax({
+                url: '/add_to_wishlist/' + productId + '/',
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                success: function(response) {
+                    if (response.success) {
+                        btn.classList.add('active');
+                        // Optional: Change icon color or add some animation
+                        const icon = btn.querySelector('i');
+                        icon.style.color = '#ff0000';
+                    } else {
+                        if (response.redirect) {
+                            window.location.href = response.redirect;
+                        }
+                        alert(response.message);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred while adding the item to the wishlist.');
+                }
+            });
+        }
+        </script>
+
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+
+        <script>
+        $(document).ready(function () {
+            let currentIndex = -1; // To track the current highlighted suggestion
+
+            $("#search-box").autocomplete({
+                source: function (request, response) {
+                    $.ajax({
+                        url: "{% url 'search_suggestions' %}",
+                        data: { term: request.term },
+                        dataType: "json",
+                        success: function (data) {
+                            response(data);
+                        },
+                        error: function() {
+                            response([]); // Return an empty array on error
+                        }
+                    });
+                },
+                minLength: 2, // Minimum characters before search triggers
+            });
+
+            // Handle keyboard navigation
+            $("#search-box").on("keydown", function (e) {
+                const suggestions = $("#suggestions-list div");
+                if (e.key === "ArrowDown") {
+                    currentIndex = (currentIndex + 1) % suggestions.length;
+                    suggestions.removeClass("highlight");
+                    if (currentIndex >= 0) {
+                        suggestions.eq(currentIndex).addClass("highlight");
+                    }
+                    e.preventDefault();
+                } else if (e.key === "ArrowUp") {
+                    currentIndex = (currentIndex - 1 + suggestions.length) % suggestions.length;
+                    suggestions.removeClass("highlight");
+                    if (currentIndex >= 0) {
+                        suggestions.eq(currentIndex).addClass("highlight");
+                    }
+                    e.preventDefault();
+                } else if (e.key === "Enter") {
+                    if (currentIndex >= 0) {
+                        const selectedSuggestion = suggestions.eq(currentIndex).text();
+                        $("#search-box").val(selectedSuggestion);
+                        $("#suggestions-list").empty(); // Clear suggestions
+                    }
+                }
+            });
+
+            // Dynamic Search
+            $("#search-box").on("input", function () {
+                let query = $(this).val();
+                if (query.length > 1) {
+                    $.ajax({
+                        url: "{% url 'allproducts' %}",
+                        data: { search: query },
+                        success: function (data) {
+                            $(".product-list").html($(data).find(".product-list").html());
+                        },
+                    });
+                }
+            });
+        });
+        </script>
+
+<script>
+    // Function to check if device is mobile
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+    
+    // Function to share on WhatsApp
+    async function shareOnWhatsApp(event, imageUrl, productName, productId) {
+        event.stopPropagation();
+        
+        // Create the product page URL
+        const productPageUrl = `${window.location.origin}/detail/${productId}/`;
+        const text = `Check out this amazing product: ${productName}\n${productPageUrl}`;
+        
+        if (isMobileDevice()) {
+            // For mobile devices
+            const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(text)}`;
+            
+            // Fallback to WhatsApp web if app URL fails
+            window.location.href = whatsappUrl;
+            
+            // Fallback after a short delay if WhatsApp app is not installed
+            setTimeout(() => {
+                window.location.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            }, 500);
+        } else {
+            // For desktop browsers
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+    }
+    
+    // Function to share on Instagram
+    async function shareOnInstagram(event, imageUrl, productName, productId) {
+        event.stopPropagation();
+        
+        // Create the product page URL
+        const productPageUrl = `${window.location.origin}/detail/${productId}/`;
+        
+        if (isMobileDevice()) {
+            // For mobile devices - try to open Instagram app
+            try {
+                window.location.href = 'instagram://camera';
+                
+                // Copy the URL to clipboard
+                await navigator.clipboard.writeText(productPageUrl);
+                alert('Product link copied to clipboard. You can paste it in your Instagram post!');
+                
+                // Fallback to Instagram website after a short delay
+                setTimeout(() => {
+                    window.location.href = 'https://instagram.com';
+                }, 500);
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = 'https://instagram.com';
+            }
+        } else {
+            // For desktop - open Instagram website
+            window.open('https://instagram.com', '_blank');
+            // Copy the URL to clipboard
+            await navigator.clipboard.writeText(productPageUrl);
+            alert('Product link copied to clipboard. You can paste it in your Instagram post!');
+        }
+    }
+    
+    // Function to toggle share options
+    function toggleShareOptions(event, productId) {
+        event.stopPropagation();
+        const shareOptions = document.getElementById(`share-options-${productId}`);
+        
+        // Close all other open share options
+        document.querySelectorAll('.share-options.show').forEach(element => {
+            if (element !== shareOptions) {
+                element.classList.remove('show');
+            }
+        });
+        shareOptions.classList.toggle('show');
+    }
+    
+    // Close share options when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.share-btn') && !event.target.closest('.share-options')) {
+            document.querySelectorAll('.share-options.show').forEach(element => {
+                element.classList.remove('show');
+            });
+        }
+    });
+    </script>
+
+    <script>
+    // Function to search by image
+    function searchByImage() {
+        const modal = document.querySelector('.image-preview-modal');
+        if (!modal) {
+            console.error('Modal not found');
+            return;
+        }
+
+        const image = modal.querySelector('.preview-image')?.src;
+        if (!image) {
+            console.error('Image not found');
+            return;
+        }
+        
+        // Show loading state
+        const productsContainer = document.querySelector('.products-grid');
+        if (productsContainer) {
+            productsContainer.innerHTML = `
+                <div class="loading-results">
+                    <div class="loading-spinner"></div>
+                    <p class="mt-3">Searching for similar products...</p>
+                </div>
+            `;
+        }
+
+        // Create form data
+        const formData = new FormData();
+        formData.append('image', dataURLtoFile(image, 'search-image.jpg'));
+        
+        // Get CSRF token from cookie instead of DOM
+        const csrftoken = getCookie('csrftoken');
+
+        // Send image to server
+        fetch('{% url "search_by_image" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                closePreviewModal();
+                updateProductList(data.results);
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            if (productsContainer) {
+                productsContainer.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h3>Error Occurred</h3>
+                        <p>${error.message}</p>
+                        <button onclick="window.location.reload()" class="btn btn-primary mt-3">
+                            Show All Products
+                        </button>
+                    </div>
+                `;
+            }
+        });
+    }
+
+    // Function to get cookie by name
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Make sure the CSRF token is included in your template
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add CSRF token to all AJAX requests
+        const csrftoken = getCookie('csrftoken');
+        if (csrftoken) {
+            document.querySelectorAll('form').forEach(form => {
+                if (!form.querySelector('input[name="csrfmiddlewaretoken"]')) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrfmiddlewaretoken';
+                    input.value = csrftoken;
+                    form.appendChild(input);
+                }
+            });
+        }
+    });
+
+    // Add null checks for all DOM operations
+    function triggerImageUpload(event) {
+        event.preventDefault();
+        const fileInput = document.getElementById('image-upload');
+        if (fileInput) {
+            fileInput.click();
+        } else {
+            console.error('File input not found');
+        }
+    }
+
+    function handleImageUpload(event) {
+        const file = event.target?.files?.[0];
+        if (!file) {
+            console.error('No file selected');
+            return;
+        }
+
+        // Check if file is an image
+        if (!file.type.startsWith('image/')) {
+            alert('Please upload an image file');
+            return;
+        }
+
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Please upload an image smaller than 5MB');
+            return;
+        }
+
+        const cameraBtn = document.querySelector('.camera-btn');
+        if (cameraBtn) {
+            cameraBtn.classList.add('loading');
+        }
+
+        // Create or get modal
+        let modal = document.querySelector('.image-preview-modal');
+        if (!modal) {
+            modal = createPreviewModal();
+            document.body.appendChild(modal);
+        }
+
+        // Read and preview image
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const previewImage = modal.querySelector('.preview-image');
+            if (previewImage) {
+                previewImage.src = e.target.result;
+                modal.style.display = 'flex';
+            }
+            if (cameraBtn) {
+                cameraBtn.classList.remove('loading');
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Function to create preview modal
+    function createPreviewModal() {
+        const modal = document.createElement('div');
+        modal.className = 'image-preview-modal';
+        modal.innerHTML = `
+            <div class="image-preview-content">
+                <button class="image-preview-close" onclick="closePreviewModal()">&times;</button>
+                <img class="preview-image" src="" alt="Preview">
+                <div class="preview-controls">
+                    <button class="search-btn" onclick="searchByImage()">Search</button>
+                    <button class="cancel-btn" onclick="closePreviewModal()">Cancel</button>
+                </div>
+            </div>
+        `;
+        return modal;
+    }
+
+    // Function to close preview modal
+    function closePreviewModal() {
+        const modal = document.querySelector('.image-preview-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.getElementById('image-upload').value = ''; // Reset file input
+        }
+    }
+
+    // Function to update product list with search results
+    function updateProductList(results) {
+        const productsContainer = document.querySelector('.products-grid');
+        if (!productsContainer) {
+            console.error('Products container not found');
+            return;
+        }
+
+        // Clear current products
+        productsContainer.innerHTML = '';
+
+        if (!results || results.length === 0) {
+            // Show no results message
+            productsContainer.innerHTML = `
+                <div class="no-results">
+                    <i class="fas fa-search"></i>
+                    <h3>No Similar Products Found</h3>
+                    <p>We couldn't find any products that match your image. Try another image or browse our categories.</p>
+                    <button onclick="window.location.reload()" class="btn btn-primary mt-3">
+                        Show All Products
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        // Create and append product cards for each result
+        results.forEach(product => {
+            const similarityPercentage = Math.round(product.similarity_score * 100);
+            const productCard = `
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="product-card">
+                        <div class="similarity-badge ${similarityPercentage > 80 ? 'high-match' : 'moderate-match'}">
+                            ${similarityPercentage}% Match
+                        </div>
+                        <div class="product-image">
+                            <img src="${product.image_url}" alt="${product.name}" 
+                                 onclick="window.location.href='/detail/${product.id}/'">
+                            <div class="product-actions">
+                                <button class="wishlist-btn" onclick="addToWishlist(event, ${product.id})">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                                <button class="share-btn" onclick="toggleShareOptions(event, ${product.id})">
+                                    <i class="fas fa-share-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="product-info">
+                            <h5 class="product-title">${product.name}</h5>
+                            <p class="product-price">₹${product.price}</p>
+                            ${product.category ? `<span class="product-category">${product.category}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            productsContainer.insertAdjacentHTML('beforeend', productCard);
+        });
+
+        // Scroll to results
+        productsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    </script>
+
+    <script>
+    // Add this function to convert Data URL to File object
+    function dataURLtoFile(dataurl, filename) {
+        // Split the data URL to get the base64 data
+        const arr = dataurl.split(',');
+        // Get the MIME type
+        const mime = arr[0].match(/:(.*?);/)[1];
+        // Convert base64 to binary
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        
+        // Convert to Uint8Array
+        while(n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        
+        // Create and return File object
+        return new File([u8arr], filename, {type: mime});
+    }
+    </script>
+</div>
+{% endblock %}
+
+<!-- Update Font Awesome CDN in your base template or header -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">

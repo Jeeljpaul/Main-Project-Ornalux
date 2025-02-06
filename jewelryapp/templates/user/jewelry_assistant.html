@@ -1,0 +1,597 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jewellery Assistance Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: #fff;
+            padding: 15px 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: #666;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #007bff;
+        }
+
+        .main-container {
+            display: flex;
+            padding: 30px;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .info-section {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .info-card ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .info-card li {
+            margin-bottom: 10px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-container {
+            flex: 2;
+            background-color: #fff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #007bff 0%, #00bfff 100%);
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .chat-header p {
+            font-size: 0.9em;
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .chat-message {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-message.user {
+            flex-direction: row-reverse;
+        }
+
+        .chat-message img {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            margin: 0 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-message div {
+            background-color: #fff;
+            padding: 12px 16px;
+            border-radius: 15px;
+            max-width: 70%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-message.user div {
+            background: linear-gradient(135deg, #007bff 0%, #00bfff 100%);
+            color: #fff;
+        }
+
+        .chat-input {
+            padding: 15px;
+            background-color: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .image-upload label {
+            cursor: pointer;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .image-upload label:hover {
+            background: #e9ecef;
+        }
+
+        .image-upload img {
+            width: 24px;
+            height: 24px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .chat-input button {
+            background: linear-gradient(135deg, #007bff 0%, #00bfff 100%);
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+
+        .chat-input button:hover {
+            transform: translateY(-1px);
+        }
+
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .mic-icon {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: transform 0.2s;
+        }
+
+        .mic-icon:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                padding: 15px;
+            }
+            
+            .chat-container {
+                height: 70vh;
+            }
+        }
+
+        .image-upload-preview {
+            text-align: center;
+            margin: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .image-upload-preview img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .image-upload-preview p {
+            color: #666;
+            margin: 0;
+            font-size: 14px;
+        }
+    </style>
+    <script>
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // Check file size (max 5MB)
+                const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+                if (file.size > maxSize) {
+                    alert('Image size should be less than 5MB');
+                    event.target.value = ''; // Clear the input
+                    return;
+                }
+
+                // Validate file type
+                const validImageTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+                if (!validImageTypes.includes(file.type)) {
+                    alert('Please upload a valid image file (JPEG, PNG, or WebP)');
+                    event.target.value = ''; // Clear the input
+                    return;
+                }
+
+                // Create FormData for image validation
+                const validationFormData = new FormData();
+                validationFormData.append('image', file);
+                validationFormData.append('validate_only', 'true');
+
+                try {
+                    // Show loading message
+                    const chatMessages = document.querySelector('.chat-messages');
+                    const loadingMessage = document.createElement('div');
+                    loadingMessage.className = 'chat-message bot';
+                    loadingMessage.innerHTML = `
+                        <img src="https://i.pinimg.com/originals/9a/11/33/9a1133d4af3b637e1c6c8ff251785f27.jpg" alt="Bot">
+                        <div>Analyzing your image, please wait...</div>
+                    `;
+                    chatMessages.appendChild(loadingMessage);
+
+                    // Validate if image contains jewelry
+                    const validationResponse = await fetch('/validate_image/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: validationFormData
+                    });
+
+                    if (!validationResponse.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+
+                    const validationData = await validationResponse.json();
+
+                    // Remove loading message
+                    chatMessages.removeChild(loadingMessage);
+
+                    if (!validationData.is_jewelry) {
+                        const errorMessage = document.createElement('div');
+                        errorMessage.className = 'chat-message bot';
+                        errorMessage.innerHTML = `
+                            <img src="https://i.pinimg.com/originals/9a/11/33/9a1133d4af3b637e1c6c8ff251785f27.jpg" alt="Bot">
+                            <div>I couldn't detect any jewelry in this image. Please ensure:
+                                <ul>
+                                    <li>The image contains jewelry items</li>
+                                    <li>The jewelry is clearly visible</li>
+                                    <li>The image is well-lit</li>
+                                    <li>The image is in focus</li>
+                                </ul>
+                                Please try uploading another image.</div>
+                        `;
+                        chatMessages.appendChild(errorMessage);
+                        event.target.value = ''; // Clear the input
+                        return;
+                    }
+
+                    // Show success message
+                    const confirmationMessage = document.createElement('div');
+                    confirmationMessage.className = 'chat-message bot';
+                    confirmationMessage.innerHTML = `
+                        <img src="https://i.pinimg.com/originals/9a/11/33/9a1133d4af3b637e1c6c8ff251785f27.jpg" alt="Bot">
+                        <div>✅ Image successfully received! Please type your question about this jewelry piece.</div>
+                    `;
+                    chatMessages.appendChild(confirmationMessage);
+                    
+                    // Store the file for later use
+                    window.pendingImage = file;
+                    
+                } catch (error) {
+                    console.error('Error handling image:', error);
+                    const chatMessages = document.querySelector('.chat-messages');
+                    const errorMessage = document.createElement('div');
+                    errorMessage.className = 'chat-message bot';
+                    errorMessage.innerHTML = `
+                        <img src="https://i.pinimg.com/originals/9a/11/33/9a1133d4af3b637e1c6c8ff251785f27.jpg" alt="Bot">
+                        <div>Sorry, there was an error processing your image. Please try again. If the problem persists, try:
+                            <ul>
+                                <li>Using a different image format (JPEG, PNG, or WebP)</li>
+                                <li>Reducing the image size</li>
+                                <li>Checking your internet connection</li>
+                            </ul>
+                        </div>
+                    `;
+                    chatMessages.appendChild(errorMessage);
+                    event.target.value = ''; // Clear the input
+                }
+            }
+        }
+
+        async function sendMessage() {
+            const inputField = document.querySelector('.chat-input .message-input');
+            const message = inputField.value.trim();
+            const pendingImage = window.pendingImage;
+
+            try {
+                // Validate inputs
+                if (!message && !pendingImage) {
+                    alert('Please enter a message or upload an image');
+                    return;
+                }
+
+                // Add loading message
+                const loadingMessage = document.createElement('div');
+                loadingMessage.className = 'chat-message bot';
+                loadingMessage.innerHTML = `
+                    <img src="https://i.pinimg.com/originals/9a/11/33/9a1133d4af3b637e1c6c8ff251785f27.jpg" alt="Bot">
+                    <div>Processing your request...</div>
+                `;
+                document.querySelector('.chat-messages').appendChild(loadingMessage);
+
+                // Create FormData
+                const formData = new FormData();
+                
+                if (message) {
+                    formData.append('query', message);
+                }
+                
+                if (pendingImage) {
+                    // Add a check for image size
+                    if (pendingImage.size > 5 * 1024 * 1024) { // 5MB limit
+                        throw new Error('Image size exceeds 5MB limit');
+                    }
+                    formData.append('image', pendingImage, pendingImage.name);
+                }
+
+                // Log the FormData contents for debugging
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
+
+                // Send request to server
+                const response = await fetch('/get_response/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: formData
+                });
+
+                // Get the response text for error handling
+                const responseText = await response.text();
+                let data;
+                
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    console.error('Response parsing error:', responseText);
+                    throw new Error('Invalid response format from server');
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Server Error: ${data.error || responseText}`);
+                }
+
+                // Remove loading message
+                document.querySelector('.chat-messages').removeChild(loadingMessage);
+
+                // Display user's message/image
+                const userMessage = document.createElement('div');
+                userMessage.className = 'chat-message user';
+                let userContent = '';
+                
+                if (message) {
+                    userContent += `<div>${message}</div>`;
+                }
+                if (pendingImage) {
+                    const imagePreview = URL.createObjectURL(pendingImage);
+                    userContent += `<div><img src="${imagePreview}" class="preview-image" alt="Uploaded Image"></div>`;
+                }
+                userMessage.innerHTML = `
+                    ${userContent}
+                    <img src="https://cdn3d.iconscout.com/3d/premium/thumb/user-attraction-3d-icon-download-in-png-blend-fbx-gltf-file-formats--people-attract-magnetism-magnet-marketing-advertisement-pack-branding-icons-4863033.png" alt="User">
+                `;
+                document.querySelector('.chat-messages').appendChild(userMessage);
+
+                // Display bot response
+                const botMessage = document.createElement('div');
+                botMessage.className = 'chat-message bot';
+                botMessage.innerHTML = `
+                    <img src="https://i.pinimg.com/originals/9a/11/33/9a1133d4af3b637e1c6c8ff251785f27.jpg" alt="Bot">
+                    <div>
+                        ${data.response.split('\n').map(line => `• ${line}`).join('<br>')}
+                        <img src="https://cdn0.iconfinder.com/data/icons/carbon-mobile-browser-2/48/read-aloud-512.png" 
+                             alt="Mic" 
+                             class="mic-icon" 
+                             onclick="speak('${data.response.replace(/'/g, "\\'")}')">
+                    </div>
+                `;
+                document.querySelector('.chat-messages').appendChild(botMessage);
+
+                // Clear input and pending image
+                inputField.value = '';
+                window.pendingImage = null;
+                document.getElementById('imageInput').value = '';
+
+            } catch (error) {
+                console.error('Error details:', error);
+                const chatMessages = document.querySelector('.chat-messages');
+                
+                // Remove loading message if it exists
+                const loadingMessage = chatMessages.querySelector('.chat-message.bot:last-child');
+                if (loadingMessage) {
+                    chatMessages.removeChild(loadingMessage);
+                }
+                
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'chat-message bot';
+                errorMessage.innerHTML = `
+                    <img src="https://i.pinimg.com/originals/9a/11/33/9a1133d4af3b637e1c6c8ff251785f27.jpg" alt="Bot">
+                    <div>
+                        Sorry, there was an error processing your request.<br>
+                        Error details: ${error.message}<br>
+                        Please ensure:
+                        <ul>
+                            <li>Your image is less than 5MB</li>
+                            <li>You're using a supported image format (JPEG, PNG, WebP)</li>
+                            <li>Your message is not too long</li>
+                            <li>You have a stable internet connection</li>
+                        </ul>
+                    </div>
+                `;
+                chatMessages.appendChild(errorMessage);
+            }
+        }
+
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = window.speechSynthesis.getVoices();
+            
+            // Select a different voice, e.g., the second available voice
+            if (voices.length > 1) {
+                utterance.voice = voices[1]; // Change the index to select a different voice
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+    </script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <img src="https://i.pinimg.com/originals/9a/11/33/9a1133d4af3b637e1c6c8ff251785f27.jpg" alt="Logo">
+            Jewelry Assistant
+        </div>
+        <div class="nav-links">
+            <li class="nav-item"><a class="nav-link text-white nav-icon" href="{% url 'home' %}"><i class="fas fa-home" style="margin-right: 40px;"></i></a></li>
+            <li class="nav-item"><a class="nav-link text-white nav-icon" href="{% url 'logout' %}"><i class="fas fa-sign-out"></i></a></li>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div class="info-section">
+            <div class="info-card">
+                <h3>How Can I Help You?</h3>
+                <ul>
+                    <li>🔍 Jewelry Identification</li>
+                    <li>💎 Gemstone Information</li>
+                    <li>💫 Design Consultation</li>
+                    <li>💰 Price Estimation</li>
+                    <li>🛠️ Care & Maintenance</li>
+                    <li>🔧 Repair Assessment</li>
+                </ul>
+            </div>
+            <div class="info-card">
+                <h3>Upload Features</h3>
+                <ul>
+                    <li>📸 Share jewelry images</li>
+                    <li>🔍 Get detailed analysis</li>
+                    <li>💡 Receive expert advice</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2>Welcome to Jewellery Assistance</h2>
+                <p>Ask me anything about jewelry! Upload images of jewelry for specific questions.</p>
+            </div>
+            <div class="chat-messages">
+                <!-- Initial bot message -->
+                <div class="chat-message bot">
+                    <img src="https://i.pinimg.com/originals/9a/11/33/9a1133d4af3b637e1c6c8ff251785f27.jpg" alt="Bot">
+                    <div>Hello! I'm your jewelry assistant. I can help you identify jewelry pieces, provide maintenance tips, and assess repairs needed. For maintenance questions or repair assessments, please upload a clear image of your jewelry. I can guide you with:
+                        • Daily care and cleaning tips
+                        • Initial damage assessment
+                        • Maintenance recommendations
+                        • Professional service consultation
+                    For any repairs or detailed assessments, I'll help direct you to our nearest branch where our expert team can provide you with the best solution. Feel free to ask any questions!</div>
+                </div>
+            </div>
+            <div class="chat-input">
+                <div class="image-upload">
+                    <label for="imageInput">
+                        <img src="https://cdn-icons-png.flaticon.com/512/3342/3342137.png" alt="Upload Image">
+                    </label>
+                    <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)">
+                </div>
+                <input type="text" class="message-input" placeholder="Type your message...">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
