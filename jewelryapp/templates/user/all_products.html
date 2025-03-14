@@ -19,7 +19,7 @@
                                value="{{ request.GET.search }}" 
                                class="form-control" 
                                autocomplete="off"/>
-                        <button class="camera-btn" onclick="triggerImageUpload(event)">
+                        <button type="button" class="camera-btn" onclick="triggerImageUpload(event)">
                             <i class="fas fa-camera"></i>
                         </button>
                         <!-- Hidden file input for image upload -->
@@ -30,6 +30,13 @@
                                onchange="handleImageUpload(event)">
                     </div>
                     <div id="suggestions-list" class="suggestions-list"></div>
+                </div>
+                <!-- Add this right after the search-wrapper div -->
+                <div class="voice-search-container">
+                    <button type="button" id="voice-search-btn" class="voice-search-btn">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <span id="voice-search-status" class="voice-search-status">Click to speak</span>
                 </div>
                 <!-- Category Filter -->
                 <div class="filter-section mb-3">
@@ -804,6 +811,66 @@
     }
 }
 
+.voice-search-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 15px;
+    gap: 10px;
+}
+
+.voice-search-btn {
+    background: #4a90e2;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.voice-search-btn i {
+    color: white;
+    font-size: 20px;
+}
+
+.voice-search-btn:hover {
+    transform: scale(1.05);
+    background: #357abd;
+}
+
+.voice-search-btn.listening {
+    animation: pulse 1.5s infinite;
+    background: #dc3545;
+}
+
+.voice-search-status {
+    color: #666;
+    font-size: 14px;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@media (max-width: 768px) {
+    .voice-search-container {
+        margin-top: 10px;
+    }
+}
+
         </style>
 
         <!-- Add this JavaScript for wishlist functionality -->
@@ -1266,6 +1333,203 @@
         // Create and return File object
         return new File([u8arr], filename, {type: mime});
     }
+    </script>
+
+    <!-- Add this JavaScript before the closing </script> tag -->
+    <script>
+        // Voice search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const voiceSearchBtn = document.getElementById('voice-search-btn');
+            const voiceSearchStatus = document.getElementById('voice-search-status');
+            const searchBox = document.getElementById('search-box');
+            const filterForm = document.getElementById('filter-form');
+
+            // Check if browser supports speech recognition
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                voiceSearchBtn.style.display = 'none';
+                voiceSearchStatus.textContent = 'Voice search not supported in this browser';
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            let isListening = false;
+
+            voiceSearchBtn.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent any form submission
+                e.stopPropagation(); // Stop event bubbling
+                
+                if (!isListening) {
+                    // Start listening
+                    recognition.start();
+                    voiceSearchBtn.classList.add('listening');
+                    voiceSearchStatus.textContent = 'Listening...';
+                    isListening = true;
+                } else {
+                    // Stop listening
+                    recognition.stop();
+                    voiceSearchBtn.classList.remove('listening');
+                    voiceSearchStatus.textContent = 'Click to speak';
+                    isListening = false;
+                }
+            });
+
+            recognition.onresult = function(event) {
+                const voiceText = event.results[0][0].transcript.toLowerCase();
+                searchBox.value = voiceText;
+                voiceSearchStatus.textContent = `Searching for: ${voiceText}`;
+                
+                // Parse the voice input for specific attributes
+                const categoryTypes = [
+                    'necklace', 'ring', 'bracelet', 'earring', 'pendant',
+                    'anklet', 'chain', 'bangles', 'nose pin', 'mangalsutra'
+                ];
+                
+                const metalTypes = [
+                    'gold', 'silver', 'platinum', 'rose gold', 'white gold',
+                    '18k gold', '22k gold', '24k gold'
+                ];
+                
+                const stoneTypes = [
+                    'diamond', 'ruby', 'emerald', 'sapphire', 'pearl',
+                    'topaz', 'amethyst', 'jade', 'opal'
+                ];
+                
+                const genderTerms = {
+                    men: ['men', 'man', 'mens', "men's", 'male', 'gents', 'gentleman'],
+                    women: ['women', 'woman', 'womens', "women's", 'female', 'ladies'],
+                    unisex: ['unisex', 'both', 'anyone', 'all'],
+                    kids: ['kids', 'children', 'child', 'boy', 'girl', 'teenage'],
+                    baby: ['baby', 'infant', 'newborn', 'toddler']
+                };
+                
+                // Function to find matches in voice text
+                function findMatches(terms, text) {
+                    return terms.find(term => text.includes(term));
+                }
+                
+                // Function to find gender in voice text
+                function findGender(text) {
+                    for (let [gender, terms] of Object.entries(genderTerms)) {
+                        if (terms.some(term => text.includes(term))) {
+                            return gender;
+                        }
+                    }
+                    return null;
+                }
+                
+                // Function to find category in voice text
+                function findCategory(text) {
+                    const detected = findMatches(categoryTypes, text);
+                    if (detected) {
+                        // Map the detected category to the corresponding category ID
+                        const categorySelect = document.getElementById('category-select');
+                        const options = Array.from(categorySelect.options);
+                        const matchingOption = options.find(option => 
+                            option.text.toLowerCase().includes(detected)
+                        );
+                        return matchingOption ? matchingOption.value : null;
+                    }
+                    return null;
+                }
+                
+                // Extract attributes from voice input
+                const detectedCategory = findCategory(voiceText);
+                const detectedMetal = findMatches(metalTypes, voiceText);
+                const detectedStone = findMatches(stoneTypes, voiceText);
+                const detectedGender = findGender(voiceText);
+                
+                // Clear previous selections
+                $('#category-select').val('');  // Clear category selection
+                $('input[name="metaltype"]').prop('checked', false);
+                $('input[name="stonetype"]').prop('checked', false);
+                $('input[name="gender"]').prop('checked', false);
+                
+                // Set detected category
+                if (detectedCategory) {
+                    $('#category-select').val(detectedCategory);
+                }
+                
+                // Set detected filters
+                if (detectedMetal) {
+                    $(`input[name="metaltype"]`).each(function() {
+                        if ($(this).parent().text().trim().toLowerCase().includes(detectedMetal)) {
+                            $(this).prop('checked', true);
+                        }
+                    });
+                }
+                
+                if (detectedStone) {
+                    $(`input[name="stonetype"]`).each(function() {
+                        if ($(this).parent().text().trim().toLowerCase().includes(detectedStone)) {
+                            $(this).prop('checked', true);
+                        }
+                    });
+                }
+                
+                if (detectedGender) {
+                    $(`input[name="gender"][value="${detectedGender}"]`).prop('checked', true);
+                }
+
+                // Use AJAX to perform the search
+                $.ajax({
+                    url: '{% url "allproducts" %}',
+                    data: {
+                        search: voiceText,
+                        category: detectedCategory || $('#category-select').val(),
+                        metaltype: $('input[name="metaltype"]:checked').map(function() {
+                            return this.value;
+                        }).get(),
+                        stonetype: $('input[name="stonetype"]:checked').map(function() {
+                            return this.value;
+                        }).get(),
+                        gender: $('input[name="gender"]:checked').map(function() {
+                            return this.value;
+                        }).get(),
+                        try_at_home: $('input[name="try_at_home"]').is(':checked') ? 'true' : ''
+                    },
+                    success: function(response) {
+                        // Update the products grid with the new results
+                        $('.products-grid').html($(response).find('.products-grid').html());
+                        
+                        // Update status with detected filters
+                        let statusText = `Searching for: ${voiceText}`;
+                        if (detectedCategory || detectedMetal || detectedStone || detectedGender) {
+                            statusText += '\nDetected filters:';
+                            if (detectedCategory) {
+                                const categoryName = $('#category-select option:selected').text();
+                                statusText += `\n- Category: ${categoryName}`;
+                            }
+                            if (detectedMetal) statusText += `\n- Metal: ${detectedMetal}`;
+                            if (detectedStone) statusText += `\n- Stone: ${detectedStone}`;
+                            if (detectedGender) statusText += `\n- Gender: ${detectedGender}`;
+                        }
+                        voiceSearchStatus.textContent = statusText;
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Search error:', error);
+                        voiceSearchStatus.textContent = 'Search failed. Please try again.';
+                    }
+                });
+            };
+
+            recognition.onend = function() {
+                voiceSearchBtn.classList.remove('listening');
+                voiceSearchStatus.textContent = 'Click to speak';
+                isListening = false;
+            };
+
+            recognition.onerror = function(event) {
+                voiceSearchBtn.classList.remove('listening');
+                voiceSearchStatus.textContent = 'Error: ' + event.error;
+                isListening = false;
+            };
+        });
     </script>
 </div>
 {% endblock %}

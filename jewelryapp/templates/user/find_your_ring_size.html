@@ -1,134 +1,392 @@
 {% load static %}
+{% include 'user/trial.html' %}
+
+{% block content %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find Your Ring Size</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <title>AI Ring Size Measurement</title>
     <style>
         body {
-            background-color: #e9ecef;
-            font-family: 'Poppins', sans-serif;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
         }
         .container {
-            background-color: #fff;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-            max-width: 800px;
-            margin: 60px auto;
-            text-align: center;
-        }
-        h2 {
-            margin-bottom: 20px;
+            margin-top: 30px;
         }
         .video-container {
             position: relative;
             display: inline-block;
-            width: 100%;
+            margin: 20px auto;
         }
         video {
-            width: 100%;
-            border-radius: 10px;
-        }
-        #measurement-circle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 150px;
-            height: 150px;
-            border: 2px dashed rgba(255, 255, 255, 0.7);
-            border-radius: 50%;
-            pointer-events: none;
+            border: 2px solid #333;
+            width: 640px;
+            height: 480px;
+            background-color: #000;
         }
         canvas {
-            display: none; /* Hide canvas */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #status {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+            color: #555;
+        }
+        #ring-size, #measurement {
+            font-weight: bold;
+            color: #333;
+            font-size: 22px;
+            margin-top: 10px;
+        }
+        .loading {
+            display: none;
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        #guidelines {
+            margin: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        #hand-overlay {
+            opacity: 0.8;
+        }
+        @media (max-width: 768px) {
+            video {
+                width: 100%;
+                height: auto;
+                max-width: 640px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Find Your Ring Size</h2>
-        <p id="instruction" class="text-center text-info">Please align your finger with the circle.</p>
-        <div style="position: relative;">
-            <video id="video" autoplay></video>
-            <div id="measurement-circle"></div>
+        <h1>AI-Based Ring Size Measurement</h1>
+        
+        <div id="guidelines">
+            <h3>Guidelines for Accurate Measurement:</h3>
+            <ul>
+                <li>Hold your hand upright with fingers spread</li>
+                <li>Ensure good lighting</li>
+                <li>Keep your hand steady</li>
+                <li>Position your ring finger clearly in view</li>
+                <li>Keep your hand about 30-40cm from the camera</li>
+                <li>Make sure your entire hand is visible</li>
+            </ul>
         </div>
-        <button id="capture" class="btn btn-primary mt-3">Capture Image</button>
-        <input type="file" id="upload" accept="image/*" class="btn btn-secondary mt-3" />
-        <canvas id="canvas"></canvas>
-        <div id="result" class="mt-3 text-center"></div>
+
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas" style="display: none;"></canvas>
+            <canvas id="overlay" style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+            "></canvas>
+            <div id="hand-overlay" style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+            ">
+                <div style="
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 60%;
+                    height: 80%;
+                    border: 2px dashed #28a745;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    <div style="
+                        color: #28a745;
+                        font-weight: bold;
+                        text-shadow: 1px 1px 2px white;
+                        background-color: rgba(255, 255, 255, 0.7);
+                        padding: 5px 10px;
+                        border-radius: 5px;
+                    ">Place hand here</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading">Processing your hand measurement...</div>
+        <button id="capture">Measure Ring Size</button>
+        <p id="status">Show one hand upright for accurate measurement.</p>
+        <h2 id="ring-size">Ring Size: --</h2>
+        <h3 id="measurement">Measurement: --</h3>
     </div>
 
     <script>
-        // Access the camera
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
-        const resultDiv = document.getElementById('result');
+        
+        // Add these lines for overlay canvas
+        const overlayCanvas = document.getElementById('overlay');
+        const overlayCtx = overlayCanvas.getContext('2d');
+        
+        const captureButton = document.getElementById('capture');
+        const statusText = document.getElementById('status');
+        const ringSizeText = document.getElementById('ring-size');
+        const measurementText = document.getElementById('measurement');
+        const loadingText = document.getElementById('loading');
 
-        // Start the video stream
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                video.srcObject = stream;
-            })
-            .catch(err => {
-                console.error("Error accessing the camera: ", err);
-                resultDiv.innerHTML = "<p class='text-danger'>Unable to access the camera. Please check your permissions.</p>";
-            });
+        // Measurement configuration
+        const REQUIRED_STABLE_MEASUREMENTS = 10;
+        const STABILITY_THRESHOLD = 1.5;
+        const MEASUREMENT_INTERVAL = 500;
 
-        // Function to analyze the image
-        function analyzeImage(imageData) {
-            fetch('/analyze_ring_size/', {
-                method: 'POST',
-                body: JSON.stringify({ image: imageData }),
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if ('error' in data) {
-                    resultDiv.innerHTML = `<p class='text-danger'>${data.error}</p>`;
-                } else {
-                    resultDiv.innerHTML = `<p>Estimated Ring Size: <strong>${data.ring_size}</strong></p>`;
-                }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                resultDiv.innerHTML = "<p class='text-danger'>Error analyzing image.</p>";
-            });
+        // Measurement state
+        let measurements = [];
+        let isStabilized = false;
+        let finalMeasurement = null;
+
+        function drawLandmarks(data) {
+            if (!overlayCtx || !overlayCanvas) {
+                console.error('Overlay canvas not initialized');
+                return;
+            }
+
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            
+            if (!data || !data.landmarks) return;
+            
+            try {
+                // Draw ring finger segments
+                overlayCtx.strokeStyle = '#00ff00';
+                overlayCtx.lineWidth = 3;
+                
+                const landmarks = data.landmarks;
+                overlayCtx.beginPath();
+                // Draw MCP to PIP
+                overlayCtx.moveTo(landmarks[13].x, landmarks[13].y);
+                overlayCtx.lineTo(landmarks[14].x, landmarks[14].y);
+                // Draw PIP to DIP
+                overlayCtx.lineTo(landmarks[15].x, landmarks[15].y);
+                // Draw DIP to TIP
+                overlayCtx.lineTo(landmarks[16].x, landmarks[16].y);
+                overlayCtx.stroke();
+                
+                // Draw points
+                overlayCtx.fillStyle = '#ff0000';
+                [13, 14, 15, 16].forEach(index => {
+                    overlayCtx.beginPath();
+                    overlayCtx.arc(landmarks[index].x, landmarks[index].y, 5, 0, 2 * Math.PI);
+                    overlayCtx.fill();
+                });
+            } catch (error) {
+                console.error('Error drawing landmarks:', error);
+            }
         }
 
-        // Capture the image when the button is clicked
-        document.getElementById('capture').addEventListener('click', () => {
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/png');
-            resultDiv.innerHTML = "<p>Image captured! Analyzing...</p>";
-            analyzeImage(imageData);
+        async function captureFrameAndPredict() {
+            try {
+                if (!video.srcObject || isStabilized) return;
+                
+                overlayCanvas.width = video.videoWidth;
+                overlayCanvas.height = video.videoHeight;
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                let imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+                const response = await fetch('/predict-ring-size/', {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        'image': imageData,
+                        'continuous': 'true'
+                    }),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    if (data.error.includes("No hand detected")) {
+                        statusText.textContent = "Please show your hand clearly";
+                        statusText.className = 'error';
+                        measurements = [];
+                        isStabilized = false;
+                        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                        return;
+                    }
+                    throw new Error(data.error);
+                }
+
+                // Draw landmarks if available
+                if (data.landmarks) {
+                    drawLandmarks(data);
+                }
+
+                const currentMeasurement = parseFloat(data.measurement);
+                
+                // Add new measurement
+                measurements.push({
+                    size: data.ring_size,
+                    measurement: currentMeasurement
+                });
+
+                // Keep only the last REQUIRED_STABLE_MEASUREMENTS
+                if (measurements.length > REQUIRED_STABLE_MEASUREMENTS) {
+                    measurements.shift();
+                }
+
+                // Check stability when we have enough measurements
+                if (measurements.length === REQUIRED_STABLE_MEASUREMENTS) {
+                    const values = measurements.map(m => m.measurement);
+                    const avg = values.reduce((a, b) => a + b) / values.length;
+                    const maxDeviation = Math.max(...values.map(v => Math.abs(v - avg)));
+
+                    if (maxDeviation < STABILITY_THRESHOLD) {
+                        // We have a stable measurement
+                        isStabilized = true;
+                        finalMeasurement = {
+                            size: getMostFrequentSize(measurements),
+                            measurement: avg
+                        };
+
+                        ringSizeText.textContent = `Final Ring Size: ${finalMeasurement.size}`;
+                        measurementText.textContent = `Final Measurement: ${finalMeasurement.measurement.toFixed(1)}mm`;
+                        statusText.textContent = "✓ Measurement Complete!";
+                        statusText.className = 'success';
+                        
+                        // Add recapture button
+                        addRecaptureButton();
+                    } else {
+                        // Still unstable
+                        statusText.textContent = `Stabilizing measurement... (${maxDeviation.toFixed(1)}mm variance)`;
+                        ringSizeText.textContent = `Current Size: ${data.ring_size}`;
+                        measurementText.textContent = `Current: ${currentMeasurement.toFixed(1)}mm`;
+                    }
+                } else {
+                    // Still collecting measurements
+                    statusText.textContent = `Collecting measurements... (${measurements.length}/${REQUIRED_STABLE_MEASUREMENTS})`;
+                    ringSizeText.textContent = `Current Size: ${data.ring_size}`;
+                    measurementText.textContent = `Current: ${currentMeasurement.toFixed(1)}mm`;
+                }
+
+            } catch (error) {
+                console.error("Error:", error);
+                statusText.textContent = "Error: " + (error.message || "Failed to process image");
+                statusText.className = 'error';
+                measurements = [];
+            }
+        }
+
+        function getMostFrequentSize(measurements) {
+            const sizeCounts = {};
+            measurements.forEach(m => {
+                sizeCounts[m.size] = (sizeCounts[m.size] || 0) + 1;
+            });
+            return Object.entries(sizeCounts)
+                .reduce((a, b) => a[1] > b[1] ? a : b)[0];
+        }
+
+        function addRecaptureButton() {
+            const recaptureBtn = document.createElement('button');
+            recaptureBtn.textContent = 'Measure Again';
+            recaptureBtn.onclick = () => {
+                measurements = [];
+                isStabilized = false;
+                finalMeasurement = null;
+                statusText.textContent = "Ready for new measurement...";
+                ringSizeText.textContent = "Ring Size: --";
+                measurementText.textContent = "Measurement: --";
+                recaptureBtn.remove();
+            };
+            captureButton.parentNode.insertBefore(recaptureBtn, captureButton.nextSibling);
+            captureButton.style.display = 'none';
+        }
+
+        // Update the measurement interval
+        navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'user'
+            }
+        })
+        .then(stream => {
+            video.srcObject = stream;
+            video.play();
+            setInterval(captureFrameAndPredict, MEASUREMENT_INTERVAL);
+        })
+        .catch(err => {
+            console.error("Error accessing webcam:", err);
+            statusText.textContent = "Error: Could not access webcam";
+            statusText.className = 'error';
         });
 
-        // Handle image upload from gallery
-        document.getElementById('upload').addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        context.drawImage(img, 0, 0);
-                        const imageData = canvas.toDataURL('image/png');
-                        resultDiv.innerHTML = "<p>Image uploaded! Analyzing...</p>";
-                        analyzeImage(imageData);
-                    }
-                    img.src = e.target.result;
-                }
-                reader.readAsDataURL(file);
+        // Keep the manual capture button for single measurements
+        captureButton.addEventListener('click', async () => {
+            loadingText.style.display = 'block';
+            captureButton.disabled = true;
+            
+            try {
+                await captureFrameAndPredict();
+                statusText.textContent = "Manual measurement taken!";
+            } finally {
+                loadingText.style.display = 'none';
+                captureButton.disabled = false;
             }
         });
 
+        // Update the video loadedmetadata event handler
+        video.addEventListener('loadedmetadata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            overlayCanvas.width = video.videoWidth;
+            overlayCanvas.height = video.videoHeight;
+        });
     </script>
 </body>
 </html>
+
+{% endblock %}

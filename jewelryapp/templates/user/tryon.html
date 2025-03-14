@@ -1,0 +1,731 @@
+{% extends 'user/trial.html' %}
+{% load static %}
+
+{% block title %}Virtual Jewelry Try-On{% endblock %}
+
+{% block content %}
+<div class="tryon-container">
+    <!-- Left side - Camera View -->
+    <div class="camera-section">
+        <div class="mode-selector">
+            <button class="mode-btn active" id="liveMode">
+                <i class="fas fa-video"></i> Live
+            </button>
+            <button class="mode-btn" id="modelMode">
+                <i class="fas fa-user"></i> Model
+            </button>
+        </div>
+        <div class="video-container">
+            <video id="videoFeed" autoplay playsinline></video>
+            <canvas id="canvasOverlay"></canvas>
+            <div class="loading-overlay" style="display: none;">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+        <!-- Add download link container -->
+        <div class="download-container">
+            <a id="downloadLink" style="display: none;"></a>
+        </div>
+    </div>
+
+    <!-- Right side - Product Selection -->
+    <div class="product-section">
+        <div class="category-selector">
+            <select id="categorySelect" class="form-control">
+                <option value="">Select Category</option>
+                <option value="earring">Earrings</option>
+                <option value="necklace">Necklaces</option>
+                <option value="ring">Rings</option>
+                <option value="bracelet">Bracelets</option>
+            </select>
+        </div>
+
+        <div class="products-grid" id="productsContainer">
+            <!-- Products will be loaded here dynamically -->
+        </div>
+
+        <div class="product-details" id="productDetails">
+            <!-- Product details will be shown here -->
+        </div>
+
+        <button id="captureBtn" class="capture-btn">
+            <i class="fas fa-camera"></i> Capture
+        </button>
+    </div>
+</div>
+
+<style>
+.tryon-container {
+    display: flex;
+    height: calc(100vh - 70px);
+    background: #f5f5f5;
+}
+
+.camera-section {
+    flex: 1;
+    padding: 20px;
+    background: #fff;
+    position: relative;
+}
+
+.mode-selector {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    padding: 5px;
+    border-radius: 20px;
+    z-index: 10;
+}
+
+.mode-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    padding: 5px 15px;
+    border-radius: 15px;
+    cursor: pointer;
+}
+
+.mode-btn.active {
+    background: #fff;
+    color: #000;
+}
+
+.video-container {
+    position: relative;
+    height: 100%;
+}
+
+#videoFeed, #canvasOverlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#canvasOverlay {
+    pointer-events: none;
+}
+
+.product-section {
+    width: 400px;
+    background: #fff;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border-left: 1px solid #ddd;
+}
+
+.category-selector select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.product-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.product-card:hover {
+    transform: scale(1.05);
+}
+
+.product-card img {
+    width: 100%;
+    height: 120px;
+    object-fit: contain;
+}
+
+.product-card.selected {
+    border: 2px solid #007bff;
+}
+
+.capture-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: auto;
+}
+
+.capture-btn:hover {
+    background: #0056b3;
+}
+
+/* Add styles for download link */
+.download-container {
+    text-align: center;
+    margin-top: 10px;
+}
+
+#downloadLink {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+#downloadLink:hover {
+    background: #0056b3;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<!-- TensorFlow.js and related libraries -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm/dist/tf-backend-wasm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose/dist/handpose.js"></script>
+<script src="https://sdk.perfectcorp.com/perfect-corp-sdk.js"></script>
+
+<script>
+// First, check if we're on the virtual try-on page
+if (document.querySelector('.tryon-container')) {
+    document.addEventListener("DOMContentLoaded", async function () {
+        // Get DOM elements
+        const video = document.getElementById("videoFeed");
+        const canvas = document.getElementById("canvasOverlay");
+        const ctx = canvas.getContext("2d");
+        const select = document.getElementById("categorySelect");
+        const captureBtn = document.getElementById("captureBtn");
+        const downloadLink = document.getElementById("downloadLink");
+
+        if (!video || !canvas || !select || !captureBtn || !downloadLink) {
+            console.error("Required elements not found");
+            return;
+        }
+
+        // Set canvas size to match video
+        canvas.width = 640;
+        canvas.height = 480;
+
+        let jewelryImage = new Image();
+        let jewelryCategory = '';
+
+        select.addEventListener("change", function () {
+            jewelryImage.src = this.value;
+            jewelryCategory = this.options[this.selectedIndex].getAttribute("data-category");
+        });
+
+        try {
+            // Initialize WASM backend
+            await tf.setBackend('wasm');
+            await tf.ready();
+
+            // Load models
+            const faceModel = await facemesh.load({
+                maxFaces: 1,
+                inputResolution: { width: 640, height: 480 },
+                scale: 0.8
+            });
+            const handModel = await handpose.load();
+
+            // Start webcam
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: 640,
+                    height: 480,
+                    facingMode: "user"
+                } 
+            });
+            video.srcObject = stream;
+
+            async function detectLandmarks() {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Face detection for earrings and necklaces
+                    const faces = await faceModel.estimateFaces(video);
+                    faces.forEach(face => {
+                        if (jewelryCategory === "earring") {
+                            // More precise ear landmark points
+                            const leftEarTop = face.scaledMesh[234];
+                            const leftEarBottom = face.scaledMesh[93];
+                            const rightEarTop = face.scaledMesh[454];
+                            const rightEarBottom = face.scaledMesh[323];
+
+                            // Calculate earring size based on ear height
+                            const earHeight = Math.abs(leftEarTop[1] - leftEarBottom[1]);
+                            const earringSize = earHeight * 0.8; // Adjust size relative to ear
+
+                            if (jewelryImage.complete) {
+                                // Draw earrings with proper scaling and positioning
+                                ctx.drawImage(jewelryImage, 
+                                    leftEarTop[0] - earringSize/2, 
+                                    leftEarTop[1], 
+                                    earringSize, 
+                                    earringSize * 1.5);
+                                ctx.drawImage(jewelryImage, 
+                                    rightEarTop[0] - earringSize/2, 
+                                    rightEarTop[1], 
+                                    earringSize, 
+                                    earringSize * 1.5);
+                            }
+                        }
+                        if (jewelryCategory === "necklace") {
+                            // Better necklace placement using neck landmarks
+                            const neckLeft = face.scaledMesh[199];
+                            const neckRight = face.scaledMesh[419];
+                            const neckWidth = Math.abs(neckRight[0] - neckLeft[0]);
+                            
+                            if (jewelryImage.complete) {
+                                ctx.drawImage(jewelryImage,
+                                    neckLeft[0],
+                                    neckLeft[1],
+                                    neckWidth,
+                                    neckWidth * 0.4);
+                            }
+                        }
+                    });
+
+                    // Hand detection for rings and bracelets
+                    const hands = await handModel.estimateHands(video);
+                    hands.forEach(hand => {
+                        if (jewelryCategory === "ring") {
+                            // Get multiple finger landmarks for better ring placement
+                            const ringFingerBase = hand.annotations.ringFinger[0];
+                            const ringFingerTip = hand.annotations.ringFinger[3];
+                            
+                            // Calculate ring size based on finger width
+                            const fingerWidth = Math.abs(ringFingerTip[0] - ringFingerBase[0]);
+                            const ringSize = fingerWidth * 1.2;
+
+                            if (jewelryImage.complete) {
+                                ctx.drawImage(jewelryImage,
+                                    ringFingerBase[0] - ringSize/2,
+                                    ringFingerBase[1] - ringSize/2,
+                                    ringSize,
+                                    ringSize);
+                            }
+                        }
+                        if (jewelryCategory === "bracelet") {
+                            // Better bracelet placement using wrist landmarks
+                            const wristPoints = hand.annotations.wrist;
+                            const wristWidth = Math.abs(wristPoints[0][0] - wristPoints[3][0]);
+                            
+                            if (jewelryImage.complete) {
+                                ctx.drawImage(jewelryImage,
+                                    wristPoints[0][0] - wristWidth * 0.1,
+                                    wristPoints[0][1] - wristWidth * 0.1,
+                                    wristWidth * 1.2,
+                                    wristWidth * 0.4);
+                            }
+                        }
+                    });
+                }
+                requestAnimationFrame(detectLandmarks);
+            }
+
+            video.addEventListener("loadeddata", detectLandmarks);
+
+            // Update capture button click handler
+            captureBtn.addEventListener("click", function () {
+                const captureCanvas = document.createElement('canvas');
+                captureCanvas.width = canvas.width;
+                captureCanvas.height = canvas.height;
+                const captureCtx = captureCanvas.getContext('2d');
+                
+                // Draw video and overlay
+                captureCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                captureCtx.drawImage(canvas, 0, 0);
+                
+                // Update download link
+                const imgData = captureCanvas.toDataURL("image/png");
+                downloadLink.href = imgData;
+                downloadLink.download = "jewelry_tryon.png";
+                downloadLink.style.display = "inline-block";
+                downloadLink.innerText = "Download Image";
+            });
+
+            // Add category change handler
+            document.getElementById('categorySelect').addEventListener('change', async function() {
+                const category = this.value;
+                const response = await fetch(`/get-products-by-category/${category}/`);
+                const products = await response.json();
+                
+                const container = document.getElementById('productsContainer');
+                container.innerHTML = products.map(product => `
+                    <div class="product-card" data-product-id="${product.id}" data-category="${category}">
+                        <img src="${product.image_url}" alt="${product.name}">
+                        <p>${product.name}</p>
+                    </div>
+                `).join('');
+
+                // Add click handlers to product cards
+                document.querySelectorAll('.product-card').forEach(card => {
+                    card.addEventListener('click', function() {
+                        document.querySelectorAll('.product-card').forEach(c => c.classList.remove('selected'));
+                        this.classList.add('selected');
+                        jewelryImage.src = this.querySelector('img').src;
+                        jewelryCategory = this.dataset.category;
+                    });
+                });
+            });
+
+            // Add mode switch handlers
+            document.getElementById('liveMode').addEventListener('click', function() {
+                this.classList.add('active');
+                document.getElementById('modelMode').classList.remove('active');
+                // Switch to live camera mode
+            });
+
+            document.getElementById('modelMode').addEventListener('click', function() {
+                this.classList.add('active');
+                document.getElementById('liveMode').classList.remove('active');
+                // Switch to model mode (if implemented)
+            });
+
+            // Add image loading with proper scaling
+            jewelryImage.onload = function() {
+                // Pre-scale image to reasonable size
+                const maxSize = 200;
+                const scale = Math.min(maxSize / this.width, maxSize / this.height);
+                this.width = this.width * scale;
+                this.height = this.height * scale;
+            };
+
+            // Add smooth transitions for jewelry placement
+            let prevJewelryPositions = {};
+            function smoothPosition(newPos, category, id) {
+                const key = `${category}-${id}`;
+                if (!prevJewelryPositions[key]) {
+                    prevJewelryPositions[key] = newPos;
+                    return newPos;
+                }
+                
+                // Smooth transition
+                const smoothFactor = 0.85;
+                const smoothedPos = {
+                    x: prevJewelryPositions[key].x * smoothFactor + newPos.x * (1 - smoothFactor),
+                    y: prevJewelryPositions[key].y * smoothFactor + newPos.y * (1 - smoothFactor)
+                };
+                
+                prevJewelryPositions[key] = smoothedPos;
+                return smoothedPos;
+            }
+
+            // Handle Perfect Corp initialization errors
+            window.addEventListener('perfectcorp-error', function(e) {
+                console.error('Perfect Corp error:', e.detail);
+                // Show error message to user
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'alert alert-danger mt-3';
+                errorMessage.textContent = 'Failed to initialize 3D try-on. Falling back to 2D mode.';
+                document.querySelector('.camera-section').appendChild(errorMessage);
+            });
+
+            // Handle model loading progress
+            window.addEventListener('perfectcorp-loading', function(e) {
+                const loadingOverlay = document.querySelector('.loading-overlay');
+                if (e.detail.status === 'start') {
+                    loadingOverlay.style.display = 'flex';
+                } else {
+                    loadingOverlay.style.display = 'none';
+                }
+            });
+
+        } catch (error) {
+            console.error("Error initializing try-on:", error);
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'alert alert-danger mt-3';
+            errorMessage.textContent = 'Failed to initialize virtual try-on. Please check your browser compatibility or try again later.';
+            video.parentElement.appendChild(errorMessage);
+        }
+    });
+} else {
+    console.log("Not on virtual try-on page");
+}
+
+class PerfectCorpManager {
+    constructor() {
+        this.sdk = null;
+        this.currentProduct = null;
+        this.isInitialized = false;
+        this.container = document.getElementById('perfect-corp-container');
+        
+        // Create container if it doesn't exist
+        if (!this.container) {
+            this.container = document.createElement('div');
+            this.container.id = 'perfect-corp-container';
+            this.container.style.position = 'absolute';
+            this.container.style.top = '0';
+            this.container.style.left = '0';
+            this.container.style.width = '100%';
+            this.container.style.height = '100%';
+            this.container.style.display = 'none';
+            document.querySelector('.video-container').appendChild(this.container);
+        }
+    }
+
+    async initialize() {
+        try {
+            if (this.isInitialized) return;
+
+            // Initialize Perfect Corp SDK with Single-View Technology
+            this.sdk = await PerfectCorp.initialize({
+                container: 'perfect-corp-container',
+                apiKey: window.PERFECT_CORP_API_KEY, // Will be set from Django template
+                features: {
+                    singleViewConversion: true,
+                    autoLighting: true,
+                    enhancedTracking: true
+                },
+                onReady: () => {
+                    console.log('Perfect Corp SDK initialized with Single-View Technology');
+                    this.isInitialized = true;
+                },
+                onError: (error) => {
+                    console.error('Perfect Corp SDK error:', error);
+                    this.handleError(error);
+                }
+            });
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
+    async removeBackground(imageUrl) {
+        try {
+            // Show loading state
+            document.querySelector('.loading-overlay').style.display = 'flex';
+
+            // Send the image to backend for background removal
+            const response = await fetch('/remove-background/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
+                },
+                body: JSON.stringify({ image_url: imageUrl })
+            });
+
+            if (!response.ok) {
+                throw new Error('Background removal failed');
+            }
+
+            const data = await response.json();
+            return data.processed_image_url;
+        } catch (error) {
+            console.error('Background removal error:', error);
+            return imageUrl; // Fallback to original image
+        } finally {
+            document.querySelector('.loading-overlay').style.display = 'none';
+        }
+    }
+
+    getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+
+    async tryOnProduct(productId, imageUrl) {
+        try {
+            if (!this.isInitialized) {
+                await this.initialize();
+            }
+
+            // Show loading state
+            document.querySelector('.loading-overlay').style.display = 'flex';
+
+            // Remove background first
+            const processedImageUrl = await this.removeBackground(imageUrl);
+
+            // Get try-on data from backend with processed image
+            const response = await fetch(`/get-try-on-data/${productId}/?processed_image=${encodeURIComponent(processedImageUrl)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            // Switch to Perfect Corp container
+            this.container.style.display = 'block';
+            document.getElementById('videoFeed').style.display = 'none';
+            document.getElementById('canvasOverlay').style.display = 'none';
+
+            // Load and convert the model using Single-View Technology
+            await this.sdk.loadModel({
+                modelData: data.modelData,
+                renderSettings: {
+                    ...data.renderSettings,
+                    singleView: {
+                        enabled: true,
+                        enhanceDetails: true,
+                        optimizeMesh: true
+                    }
+                }
+            });
+
+            this.currentProduct = productId;
+            
+            // Initialize tracking after model is loaded
+            await this.sdk.startTracking({
+                mode: data.renderSettings.trackingMode || 'face'
+            });
+
+        } catch (error) {
+            this.handleError(error);
+        } finally {
+            document.querySelector('.loading-overlay').style.display = 'none';
+        }
+    }
+
+    async capturePhoto() {
+        if (!this.isInitialized || !this.currentProduct) return null;
+
+        try {
+            const photo = await this.sdk.capturePhoto();
+            return photo;
+        } catch (error) {
+            console.error('Failed to capture photo:', error);
+            return null;
+        }
+    }
+
+    async handleError(error) {
+        console.error('Perfect Corp error:', error);
+        
+        // Show error message
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'alert alert-danger';
+        errorMessage.textContent = 'Failed to load 3D model. Using 2D fallback.';
+        this.container.parentElement.appendChild(errorMessage);
+        
+        // Hide error after 5 seconds
+        setTimeout(() => {
+            errorMessage.remove();
+        }, 5000);
+        
+        // Switch to fallback mode
+        this.container.style.display = 'none';
+        document.getElementById('videoFeed').style.display = 'block';
+        document.getElementById('canvasOverlay').style.display = 'block';
+    }
+}
+
+// Initialize Perfect Corp Manager
+const perfectCorpManager = new PerfectCorpManager();
+
+// Modify the existing product card click handler
+document.querySelectorAll('.product-card').forEach(card => {
+    card.addEventListener('click', async function() {
+        document.querySelectorAll('.product-card').forEach(c => c.classList.remove('selected'));
+        this.classList.add('selected');
+        
+        const productId = this.dataset.productId;
+        const imageUrl = this.querySelector('img').src;
+        
+        // Try Perfect Corp first, fallback to existing implementation
+        await perfectCorpManager.tryOnProduct(productId, imageUrl);
+    });
+});
+
+// Modify the capture button click handler
+document.getElementById('captureBtn').addEventListener('click', async function() {
+    // Try Perfect Corp capture first
+    const perfectCorpPhoto = await perfectCorpManager.capturePhoto();
+    
+    if (perfectCorpPhoto) {
+        // Handle Perfect Corp photo
+        const downloadLink = document.getElementById('downloadLink');
+        downloadLink.href = perfectCorpPhoto;
+        downloadLink.download = "jewelry_tryon.png";
+        downloadLink.style.display = "inline-block";
+        downloadLink.innerText = "Download Image";
+    } else {
+        // Fallback to existing capture logic
+        const captureCanvas = document.createElement('canvas');
+        captureCanvas.width = canvas.width;
+        captureCanvas.height = canvas.height;
+        const captureCtx = captureCanvas.getContext('2d');
+        
+        captureCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        captureCtx.drawImage(canvas, 0, 0);
+        
+        const imgData = captureCanvas.toDataURL("image/png");
+        downloadLink.href = imgData;
+        downloadLink.download = "jewelry_tryon.png";
+        downloadLink.style.display = "inline-block";
+        downloadLink.innerText = "Download Image";
+    }
+});
+
+// Add mode switch handlers for Perfect Corp integration
+document.getElementById('modelMode').addEventListener('click', function() {
+    this.classList.add('active');
+    document.getElementById('liveMode').classList.remove('active');
+    
+    // Switch to Perfect Corp if available
+    if (perfectCorpManager.isInitialized && perfectCorpManager.currentProduct) {
+        perfectCorpManager.container.style.display = 'block';
+        document.getElementById('videoFeed').style.display = 'none';
+        document.getElementById('canvasOverlay').style.display = 'none';
+    }
+});
+
+document.getElementById('liveMode').addEventListener('click', function() {
+    this.classList.add('active');
+    document.getElementById('modelMode').classList.remove('active');
+    
+    // Switch to live camera mode
+    perfectCorpManager.container.style.display = 'none';
+    document.getElementById('videoFeed').style.display = 'block';
+    document.getElementById('canvasOverlay').style.display = 'block';
+});
+
+// Make API key available to PerfectCorpManager
+window.PERFECT_CORP_API_KEY = '{{ perfect_corp_api_key }}';
+</script>
+{% endblock %}

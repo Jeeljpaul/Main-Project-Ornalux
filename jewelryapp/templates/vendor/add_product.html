@@ -1,426 +1,785 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Product</title>
-    <script type="text/javascript">
-        // Function to disable the back button
-        function preventBack() {
-            history.pushState(null, null, location.href); // Add a new state to the history
-            window.addEventListener('popstate', function (event) {
-                history.pushState(null, null, location.href); // Keep adding a new state to block the back action
-            });
+    <title>Add Product - Vendor</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'css/vendor_styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Copy the same styles from add_p.html -->
+    <style>
+        /* Sidebar Styles */
+        #wrapper {
+            overflow-x: hidden;
         }
 
-        // Call the function to prevent back navigation
-        window.onload = preventBack;
-    </script>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <style>
-        body {
-            background-color: #e9ecef;
-            font-family: 'Poppins', sans-serif;
-        }
-        .container {
-            background-color: #fff;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-            max-width: 700px;
-            margin: 60px auto;
-            transition: transform 0.2s;
-        }
-        .container:hover {
-            transform: scale(1.02);
-        }
-        h2 {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 30px;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .form-group label {
-            font-weight: 500;
-            color: #555;
-            margin-bottom: 10px;
-        }
-        .form-control {
-            border-radius: 10px;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-            transition: border-color 0.3s, box-shadow 0.3s;
-            background-color: #f9f9f9;
-            height: 50px;
-        }
-        .form-control:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-            background-color: #ffffff;
-        }
-        button {
-            background-color: #28a745;
-            color: white;
-            padding: 10px 25px;
-            font-weight: 500;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-            width: 100%;
-            margin-top: 20px;
-        }
-        button:hover {
-            background-color: #218838;
-            transform: translateY(-2px);
-        }
-        .required {
-            color: red;
-        }
-        .error-message {
-            color: red;
-            font-size: 0.875rem;
-        }
         #sidebar-wrapper {
-    min-height: 100vh;
-    margin-left: 0;
-    transition: margin 0.25s ease-out;
-    background-color: #343a40; /* Dark sidebar */
-}
+            min-height: 100vh;
+            margin-left: -15rem;
+            transition: margin .25s ease-out;
+            width: 15rem;
+        }
 
         #sidebar-wrapper .sidebar-heading {
-            padding: 1rem;
-            font-size: 1.5rem;
-            background-color: #212529; /* Darker heading for contrast */
-            color: #fff;
-            text-align: center;
+            padding: 0.875rem 1.25rem;
+            font-size: 1.2rem;
+        }
+
+        #sidebar-wrapper .list-group {
+            width: 15rem;
         }
 
         .list-group-item {
             border: none;
-            background-color: transparent;
-            color: #0a0a0a; /* Light text color */
+            padding: 0.75rem 1.25rem;
         }
 
-        .list-group-item:hover, .list-group-item:focus {
-            background-color: #495057; /* Darker hover effect */
-            color: #fff;
+        .list-group-item.active {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .list-group-item:hover {
+            background-color: #f8f9fa;
+            color: #007bff;
         }
 
         #page-content-wrapper {
-            width: 100vw;
-            padding: 20px;
+            min-width: 100vw;
         }
 
-        .navbar {
-            padding-left: 0;
+        .wrapper.toggled #sidebar-wrapper {
+            margin-left: 0;
         }
 
-        .navbar-light {
-            background-color: #e9ecef; /* Light navbar background */
+        @media (min-width: 768px) {
+            #sidebar-wrapper {
+                margin-left: 0;
+            }
+
+            #page-content-wrapper {
+                min-width: 0;
+                width: 100%;
+            }
+
+            .wrapper.toggled #sidebar-wrapper {
+                margin-left: -15rem;
+            }
         }
 
+        /* Accordion Styles */
+        .accordion .card {
+            border: none;
+            background: transparent;
+        }
+
+        .accordion .card-header {
+            background: transparent;
+            padding: 0;
+            border: none;
+        }
+
+        .accordion .btn-link {
+            color: #333;
+            text-decoration: none;
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1.25rem;
+        }
+
+        .accordion .btn-link:hover,
+        .accordion .btn-link:focus {
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .accordion .card-body {
+            padding: 0;
+        }
+
+        .accordion .card-body .list-group-item {
+            padding-left: 2rem;
+        }
     </style>
-    <script>
-        function validateForm(event) {
-            let isValid = true;
-            const errors = [];
-
-            const productName = document.getElementById('id_product_name').value;
-            // const category = document.getElementById('id_category').value;
-            const description = document.getElementById('id_product_description').value;
-            // const deliveryOptions = document.getElementById('id_delivery_options').value;
-            const price = document.getElementById('id_price').value; // Keep as string for price validation
-            const stockQuantity = parseInt(document.getElementById('id_stock_quantity').value);
-            const weight = parseFloat(document.getElementById('id_weight').value);
-            // const metalType = document.getElementById('id_metal_type').value;
-            // const stoneType = document.getElementById('id_stone_type').value;
-            // const occasion = document.getElementById('id_occasion').value;
-            const gender = document.getElementById('id_gender').value;
-            const imageInput = document.getElementById('id_image');
-            const filePath = imageInput.value;
-            const allowedExtensions = /(\.jpg|\.jpeg|\.png)$/i;
-
-            // Validation for product name and category
-            const validateNameCategory = (value) => {
-    // Regular expression to check if the value contains only alphabetic characters
-            const alphabeticRegex = /^[A-Za-z\s]+$/;
-            return value[0].toUpperCase() === value[0] && 
-            value.length >= 3 && 
-            alphabeticRegex.test(value);
-};
-
-// Validation for product name
-            if (!validateNameCategory(productName)) {
-                errors.push("Product name must start with a capital letter, be at least 3 characters long, and contain only alphabetic characters.");
-                isValid = false;
-            }
-            // if (!validateNameCategory(category)) {
-            //     errors.push("Category must start with a capital letter and be at least 3 characters long.");
-            //     isValid = false;
-            // }
-
-
-
-            // Validation for description and delivery options
-            const validateDescriptionDelivery = (value) => {
-                return value[0].toUpperCase() === value[0] && value.endsWith('.') && value.length >= 10 && value.length <= 100;
-            };
-            if (!validateDescriptionDelivery(description)) {
-                errors.push("Description must start with a capital letter, end with a full stop, and be between 10 and 100 characters long.");
-                isValid = false;
-            }
-            // if (!validateDescriptionDelivery(deliveryOptions)) {
-            //     errors.push("Delivery options must start with a capital letter, end with a full stop, and be between 10 and 100 characters long.");
-            //     isValid = false;
-            // }
-
-
-
-           // Validation for price
-            const validatePrice = (value) => {
-                // Regular expression to allow numbers, commas, and periods only
-                const priceRegex = /^[0-9.,]+$/;
-                return priceRegex.test(value) && !isNaN(value.replace(/,/g, '')) && value >= 100 && value <= 10000000;
-            };
-
-            if (!validatePrice(price)) {
-                errors.push("Price must be a decimal value between 100 and 10,000,000 and can only include numbers, commas, and periods.");
-                isValid = false;
-            }
-
-
-            // Validation for stock quantity
-            if (stockQuantity < 0 || stockQuantity > 50) {
-                errors.push("Stock quantity must be between 0 and 50.");
-                isValid = false;
-            }
-
-            // Validation for weight
-            if (weight < 1 || weight > 100) {
-                errors.push("Weight must be between 1 and 100.");
-                isValid = false;
-            }
-
-            // Validation for metal type, stone type, and occasion
-            // const validateMetalStoneOccasion = (value) => {
-            //     return value[0].toUpperCase() === value[0] && value.length >= 3;
-            // };
-            // if (!validateMetalStoneOccasion(metalType)) {
-            //     errors.push("Metal type must start with a capital letter and be at least 3 characters long.");
-            //     isValid = false;
-            // }
-            // if (!validateMetalStoneOccasion(stoneType)) {
-            //     errors.push("Stone type must start with a capital letter and be at least 3 characters long.");
-            //     isValid = false;
-            // }
-            // if (!validateMetalStoneOccasion(occasion)) {
-            //     errors.push("Occasion must start with a capital letter and be at least 3 characters long.");
-            //     isValid = false;
-            // }
-
-
-            
-            // Validation for gender
-            const validGenders = ['Men', 'Women', 'Unisex', 'Kids', 'Baby'];
-            if (!validGenders.includes(gender)) {
-                errors.push("Gender must be either 'Men', 'Women', 'Unisex', 'Kids' or  'Baby'.");
-                isValid = false;
-            }
-
-            // Validation for image file type
-        if (imageInput.files.length > 0 && !allowedExtensions.exec(filePath)) {
-            errors.push("Please upload a valid image file (jpg, jpeg, or png).");
-            isValid = false;
-            imageInput.value = ''; // Clear the input field if the validation fails
-        }
-
-            // Display errors if any
-            const errorContainer = document.getElementById('error-messages');
-            errorContainer.innerHTML = '';
-            if (!isValid) {
-                errors.forEach(error => {
-                    const div = document.createElement('div');
-                    div.className = 'error-message';
-                    div.innerText = error;
-                    errorContainer.appendChild(div);
-                });
-                event.preventDefault();
-            }
-        }
-
-    
-            // Function to fetch category attributes when a category is selected
-function loadAttributes() {
-                const categoryId = document.getElementById('id_category').value;// Get the selected category ID
-                console.log("category",categoryId)
-                // Perform the AJAX request to fetch category attributes
-                if (!categoryId) {
-    console.error('Category ID is not defined.');
-    $('#attributes-container').html('<p style="color:red;">Invalid category ID. Please select a valid category.</p>');
-    return; // Exit the function if categoryId is not valid
-}
-
-$.ajax({
-    url: `/get_category_attributes/${categoryId}/`,
-    type: 'GET',
-    dataType: 'json',
-    success: function (response) {
-        console.log(response);
-        displayAttributes(response);
-    },
-    error: function (xhr, status, error) {
-        console.error('Error fetching category attributes:', error);
-        $('#attributes-container').html(`<p style="color:red;">Error fetching attributes. Please try again.</p>`);
-    }
-});
-
-            };
-
-            // Function to display category attributes on the page
-            function displayAttributes(data) {
-                const attributesContainer = $('#attributes-container'); // Select the attributes container
-                attributesContainer.empty(); // Clear previous attributes
-
-                if (data && data.attributes && data.attributes.length > 0) {
-                    let attributesHtml = '';
-                    data.attributes.forEach(function (attribute) {
-                        attributesHtml += `
-                            <div class="form-group">
-                                <label>${attribute.name}</label>
-                                <input type="text" class="form-control" name="attribute_${attribute.id}" value="${attribute.value || ''}" /> <!-- Assuming attribute.value holds the value -->
-                                <input type="hidden" name="attributes" value="${attribute.id}" /> <!-- Hidden input to store attribute ID -->
-                            </div>
-                        `; // Create a read-only input for each attribute
-                     });
-                     attributesContainer.html(attributesHtml); // Insert the generated HTML into the attributes container
-                } else {
-                    attributesContainer.html('<p>No attributes found for this category.</p>'); // Message when no attributes are found
-                }
-            }
-
-        
-    </script>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="{% url 'vendor_home' %}">Home</a>
-        <div class="collapse navbar-collapse">
-            <ul class="navbar-nav ml-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'logout' %}">Logout</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-
-    <!-- Sidebar -->
     <div class="d-flex" id="wrapper">
+        <!-- Sidebar -->
         <div class="bg-light border-right" id="sidebar-wrapper">
-            <div class="sidebar-heading">Blue Dart</div>
+            <div class="sidebar-heading">Vendor Dashboard</div>
             <div class="list-group list-group-flush">
-                <!-- Manage Users -->
-                <!-- Manage Staff -->
-                <!-- Manage Products -->
-                <!-- View Order Details -->
-                <!-- View Payment Details -->
-                <!-- View Return Details -->
-                <!-- View Booking Schedule -->
-                <!-- Manage Feedback and Reviews -->
+                <!-- Dashboard Link -->
+                <a href="{% url 'vendor_home' %}" class="list-group-item">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <div class="accordion" id="sidebarAccordion">
+                    <!-- Product Management -->
+                    <div class="card">
+                        <div class="card-header" id="productManagement">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseProducts" aria-expanded="true">
+                                    <i class="fas fa-box"></i> Product Management
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseProducts" class="collapse show" data-parent="#sidebarAccordion">
+                            <div class="card-body">
+                                <a href="{% url 'vendor_add_product' %}" class="list-group-item active">
+                                    <i class="fas fa-plus"></i> Add Product
+                                </a>
+                                <a href="{% url 'vendor_products' %}" class="list-group-item">
+                                    <i class="fas fa-list"></i> View Products
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Order Management -->
+                    <div class="card">
+                        <div class="card-header" id="orderManagement">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseOrders">
+                                    <i class="fas fa-shopping-cart"></i> Order Management
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseOrders" class="collapse" data-parent="#sidebarAccordion">
+                            <div class="card-body">
+                                <a href="{% url 'vendor_pending_orders' %}" class="list-group-item">
+                                    <i class="fas fa-clock"></i> Pending Orders
+                                </a>
+                                <a href="{% url 'vendor_order_history' %}" class="list-group-item">
+                                    <i class="fas fa-history"></i> Order History
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Logout Button -->
+                <a href="{% url 'logout' %}" class="list-group-item text-danger mt-auto">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
             </div>
         </div>
 
         <!-- Page Content -->
-        <div class="container mt-5">
-            <h2>Add New Product</h2>
-            <div id="error-messages"></div>
-            <form method="POST" enctype="multipart/form-data" onsubmit="validateForm(event)">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label for="id_product_name">Product Name <span class="required">*</span></label>
-                    <input type="text" class="form-control" id="id_product_name" name="product_name" required>
-                </div>
-                <div class="form-group">
-                    <label for="id_category">Category</label>
-                    <select class="form-control" id="id_category" name="id_category" onchange="loadAttributes()">
-                        <option value="">Select a category</option>
-                        {% for category in categories %}
-                            <option value="{{ category.category_id }}">{{ category.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+        <div id="page-content-wrapper">
+            <div class="container-fluid">
+                <h2 class="mt-4 mb-4">Add New Product</h2>
 
-                <div id="attributes-container" class="form-group"></div> <!-- Container for category attributes -->
-
-                <div class="form-group">
-                    <label for="id_product_description">Product Description <span class="required">*</span></label>
-                    <textarea class="form-control" id="id_product_description" name="product_description" rows="3" required></textarea>
+                <!-- {% if messages %}
+                <div class="messages mb-4">
+                    {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    </div>
+                    {% endfor %}
                 </div>
+                {% endif %} -->
 
-
-                <div class="form-group">
-                    <label for="id_price">Price <span class="required">*</span></label>
-                    <input type="number" class="form-control" id="id_price" name="price" min="100" max="10000000" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label for="id_stock_quantity">Stock Quantity <span class="required">*</span></label>
-                    <input type="number" class="form-control" id="id_stock_quantity" name="stock_quantity" min="0" max="50" required>
-                </div>
-                <div class="form-group">
-                    <label for="id_weight">Weight (grams) <span class="required">*</span></label>
-                    <input type="number" class="form-control" id="id_weight" name="weight" min="1" max="100" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="id_metaltype">Metal Type </label>
-                    <select class="form-control" id="id_metaltype" name="metaltype">
-                        <option value="">Select Metal Type</option>
-                        {% for metaltype in metaltypes %}
-                        <option value="{{ metaltype.metaltype_id }}">{{ metaltype.name }}</option>
-                        {% endfor %}
-                    </select>
+                <form method="POST" enctype="multipart/form-data" id="productForm">
+                    {% csrf_token %}
                     
-                </div>
+                    <!-- Basic Product Details -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Basic Product Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Product Name <span class="required">*</span></label>
+                                <input type="text" class="form-control" name="product_name" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Category <span class="required">*</span></label>
+                                <select class="form-control" name="category" id="category" required>
+                                    <option value="">Select Category</option>
+                                    {% for category in categories %}
+                                        <option value="{{ category.category_id }}">{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
+                            <!-- Dynamic Category Attributes Section -->
+                            <div id="category-attributes" class="form-group" style="display: none;">
+                                <h5>Category Specific Details</h5>
+                                <div id="attribute-fields">
+                                    <!-- Dynamic attribute fields will be loaded here -->
+                                </div>
+                            </div>
 
-                <div class="form-group">
-                    <label for="id_stonetype">Stone Type </label>
-                    <select class="form-control" id="id_stonetype" name="stonetype">
-                        <option value="">Select Stone Type</option>
-                        {% for stonetype in stonetypes %}
-                        <option value="{{ stonetype.stonetype_id }}">{{ stonetype.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                
+                            <div class="form-group">
+                                <label>Description <span class="required">*</span></label>
+                                <textarea class="form-control" name="description" rows="3" required></textarea>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="id_gender">Gender <span class="required">*</span></label>
-                    <select class="form-control" id="id_gender" name="gender" required>
-                        <option value="">Select Gender</option>
-                        <option value="Men">Men</option>
-                        <option value="Women">Women</option>
-                        <option value="Unisex">Unisex</option>
-                        <option value="Kid">Kid</option>
-                        <option value="Baby">Baby</option>
-                    </select>
-                </div>
+                    <!-- Metal Details -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Metal Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Metal Type <span class="required">*</span></label>
+                                <select class="form-control" name="metaltype" id="metaltype" required>
+                                    <option value="">Select Metal Type</option>
+                                    {% for metal in metaltypes %}
+                                        <option value="{{ metal.metaltype_id }}">{{ metal.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
-                <div class="form-group">
-                    <label for="id_image">Product Image <span class="required">*</span></label>
-                    <input type="file" class="form-control-file" id="id_image" name="image" required>
-                </div>
+                            <div class="form-group">
+                                <label>Metal Weight (grams) <span class="required">*</span></label>
+                                <input type="number" class="form-control" name="weight" id="metal_weight" 
+                                       step="0.01" min="0" required>
+                            </div>
 
-                <button type="submit">Add Product</button>
-            </form>
+                            <div class="form-group">
+                                <label>Metal Purity (KT) <span class="required">*</span></label>
+                                <select class="form-control" name="purity" id="metal_purity" required disabled>
+                                    <option value="">Select Metal Type First</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Current Metal Rate (per gram)</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text">₹</span>
+                                    </div>
+                                    <input type="text" class="form-control" id="current_rate" readonly>
+                                    <input type="hidden" name="rate_per_gram" id="rate_per_gram">
+                                    <input type="hidden" name="current_rate" id="current_rate_hidden">
+                                    <div class="input-group-append">
+                                        <span class="input-group-text">/gram</span>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted" id="rate_timestamp"></small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Metal Cost</label>
+                                <input type="text" class="form-control" id="metal_cost_display" readonly>
+                                <input type="hidden" name="metal_cost" id="metal_cost">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stone Details -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Stone Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div id="stone-sections">
+                                <!-- First stone section -->
+                                <div class="stone-section mb-4">
+                                    <h5>Stone 1</h5>
+                                    <div class="form-group">
+                                        <label>Stone Type</label>
+                                        <select class="form-control stonetype" name="stonetype[]">
+                                            <option value="">Select Stone Type</option>
+                                            {% for stone in stonetypes %}
+                                                <option value="{{ stone.stonetype_id }}" 
+                                                        data-stone-type="{{ stone.name|lower }}">
+                                                    {{ stone.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div class="stone-details-fields" style="display: none;">
+                                        <!-- Dynamic stone fields will be loaded here -->
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Stone Cost</label>
+                                        <input type="text" class="form-control stone-cost" readonly>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Add Stone Button -->
+                            <button type="button" class="btn btn-secondary mb-3" id="add-stone-btn">
+                                <i class="fas fa-plus"></i> Add Another Stone
+                            </button>
+
+                            <!-- Total Stone Cost -->
+                            <div class="form-group">
+                                <label>Total Stone Cost</label>
+                                <input type="text" class="form-control" id="total_stone_cost_display" readonly>
+                                <input type="hidden" name="total_stone_cost" id="total_stone_cost">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Price Calculation -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Price Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Making Charges (%) <span class="required">*</span></label>
+                                <input type="number" class="form-control" name="making_charges_percentage" 
+                                       id="making_charges_percentage" min="0" max="100" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Making Charges Amount</label>
+                                <input type="text" class="form-control" id="making_charges_display" readonly>
+                                <input type="hidden" name="making_charges" id="making_charges">
+                            </div>
+                            <div class="form-group">
+                                <label>Total Price</label>
+                                <input type="text" class="form-control" id="total_price_display" readonly>
+                                <input type="hidden" name="total_price" id="total_price">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Images and Video -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Product Images & Video</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Main Image <span class="required">*</span></label>
+                                <input type="file" class="form-control-file" name="main_image" accept="image/*" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Image 1</label>
+                                <input type="file" class="form-control-file" name="image2" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Image 2</label>
+                                <input type="file" class="form-control-file" name="image3" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Image 3</label>
+                                <input type="file" class="form-control-file" name="image4" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Product Video (optional)</label>
+                                <input type="file" class="form-control-file" name="product_video" 
+                                       accept="video/*">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Details -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Additional Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Stock Quantity <span class="required">*</span></label>
+                                <input type="number" class="form-control" name="stock_quantity" 
+                                       min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label>BIS Hallmark Number</label>
+                                <input type="text" class="form-control" name="bis_hallmark">
+                            </div>
+                            <div class="form-group">
+                                <label>Estimated Delivery (days) <span class="required">*</span></label>
+                                <input type="number" class="form-control" name="estimated_delivery" 
+                                       min="1" max="30" value="7" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Gender <span class="required">*</span></label>
+                                <select class="form-control" name="gender" required>
+                                    <option value="">Select Gender</option>
+                                    <option value="Men">Men</option>
+                                    <option value="Women">Women</option>
+                                    <option value="Unisex">Unisex</option>
+                                    <option value="Kids">Kids</option>
+                                    <option value="Baby">Baby</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Delivery Options</label><br>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="home_delivery">
+                                    <label class="form-check-label">Home Delivery</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="store_pickup">
+                                    <label class="form-check-label">Store Pickup</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="try_at_home">
+                                    <label class="form-check-label">Try at Home</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Buttons -->
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Product
+                        </button>
+                        <a href="{% url 'vendor_home' %}" class="btn btn-cancel">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
+
+    <!-- Success/Error Messages -->
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <script type="text/javascript">
+        // Initialize metal data from Django context
+        const metal_data = {{ metal_data|safe }};
+        
+        $(document).ready(function() {
+            // Initialize metal type change handler
+            $('#metaltype').change(function() {
+                const selectedMetalType = $(this).find('option:selected').text().toLowerCase();
+                const puritySelect = $('#metal_purity');
+                puritySelect.empty().append('<option value="">Select Purity</option>');
+                
+                if (selectedMetalType in metal_data) {
+                    const purities = metal_data[selectedMetalType];
+                    purities.forEach(function(purity) {
+                        puritySelect.append(`<option value="${purity.purity}" data-rate="${purity.rate}">${purity.purity}${selectedMetalType === 'gold' ? 'K' : ''}</option>`);
+                    });
+                    puritySelect.prop('disabled', false);
+                    updateMetalCost();
+                } else {
+                    puritySelect.prop('disabled', true);
+                }
+            });
+
+            // Handle purity change
+            $('#metal_purity').change(function() {
+                updateMetalCost();
+            });
+
+            // Handle weight change
+            $('#metal_weight').on('input', function() {
+                updateMetalCost();
+            });
+
+            // Function to update metal cost
+            function updateMetalCost() {
+                const weight = parseFloat($('#metal_weight').val()) || 0;
+                const selectedPurity = $('#metal_purity option:selected');
+                const rate = parseFloat(selectedPurity.data('rate')) || 0;
+                const purityValue = parseFloat(selectedPurity.val()) || 0;
+                const selectedMetalType = $('#metaltype option:selected').text().toLowerCase();
+
+                // Set the current rate
+                $('#current_rate').val(rate.toFixed(2));
+                $('#rate_per_gram').val(rate.toFixed(2));
+                $('#current_rate_hidden').val(rate.toFixed(2));
+
+                // Calculate metal cost
+                let purityPercentage;
+                if (selectedMetalType === 'gold') {
+                    purityPercentage = (purityValue * 100) / 24;
+                } else {
+                    purityPercentage = purityValue / 10;
+                }
+
+                const metalCost = weight * rate * (purityPercentage / 100);
+                $('#metal_cost_display').val(metalCost.toFixed(2));
+                $('#metal_cost').val(metalCost.toFixed(2));
+
+                // Update total price
+                updateTotalPrice();
+            }
+
+            // Stone configurations
+            const stoneConfigs = {
+                'diamond': {
+                    weight: {
+                        label: 'Diamond Weight (carats)',
+                        step: 0.001,
+                        min: 0
+                    },
+                    count: {
+                        label: 'Number of Diamonds',
+                        min: 1
+                    },
+                    quality: {
+                        label: 'Diamond Quality',
+                        options: [
+                            { value: 'D-IF', label: 'D-IF (Flawless)' },
+                            { value: 'E-VVS1', label: 'E-VVS1 (Very Very Slightly Included 1)' },
+                            { value: 'F-VVS2', label: 'F-VVS2 (Very Very Slightly Included 2)' },
+                            { value: 'G-VS1', label: 'G-VS1 (Very Slightly Included 1)' },
+                            { value: 'H-VS2', label: 'H-VS2 (Very Slightly Included 2)' },
+                            { value: 'I-SI1', label: 'I-SI1 (Slightly Included 1)' },
+                            { value: 'J-SI2', label: 'J-SI2 (Slightly Included 2)' }
+                        ]
+                    }
+                },
+                'ruby': {
+                    weight: {
+                        label: 'Ruby Weight (carats)',
+                        step: 0.01,
+                        min: 0
+                    },
+                    count: {
+                        label: 'Number of Rubies',
+                        min: 1
+                    },
+                    quality: {
+                        label: 'Ruby Quality',
+                        options: [
+                            { value: 'pigeon-blood', label: 'Pigeon Blood (Premium)' },
+                            { value: 'vivid-red', label: 'Vivid Red (Fine)' },
+                            { value: 'medium-red', label: 'Medium Red (Good)' },
+                            { value: 'light-red', label: 'Light Red (Commercial)' }
+                        ]
+                    }
+                },
+                'sapphire': {
+                    weight: {
+                        label: 'Sapphire Weight (carats)',
+                        step: 0.01,
+                        min: 0
+                    },
+                    count: {
+                        label: 'Number of Sapphires',
+                        min: 1
+                    },
+                    quality: {
+                        label: 'Sapphire Quality',
+                        options: [
+                            { value: 'royal-blue', label: 'Royal Blue (Premium)' },
+                            { value: 'cornflower-blue', label: 'Cornflower Blue (Fine)' },
+                            { value: 'medium-blue', label: 'Medium Blue (Good)' },
+                            { value: 'light-blue', label: 'Light Blue (Commercial)' }
+                        ]
+                    }
+                },
+                'emerald': {
+                    weight: {
+                        label: 'Emerald Weight (carats)',
+                        step: 0.01,
+                        min: 0
+                    },
+                    count: {
+                        label: 'Number of Emeralds',
+                        min: 1
+                    },
+                    quality: {
+                        label: 'Emerald Quality',
+                        options: [
+                            { value: 'muzo-green', label: 'Muzo Green (Premium)' },
+                            { value: 'vivid-green', label: 'Vivid Green (Fine)' },
+                            { value: 'medium-green', label: 'Medium Green (Good)' },
+                            { value: 'light-green', label: 'Light Green (Commercial)' }
+                        ]
+                    }
+                }
+            };
+
+            let stoneCounter = 1;
+
+            function createStoneSection() {
+                stoneCounter++;
+                const newSection = `
+                    <div class="stone-section mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5>Stone ${stoneCounter}</h5>
+                            <button type="button" class="btn btn-danger btn-sm remove-stone">
+                                <i class="fas fa-times"></i> Remove
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label>Stone Type</label>
+                            <select class="form-control stonetype" name="stonetype[]">
+                                <option value="">Select Stone Type</option>
+                                {% for stone in stonetypes %}
+                                    <option value="{{ stone.stonetype_id }}" 
+                                            data-stone-type="{{ stone.name|lower }}">
+                                        {{ stone.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="stone-details-fields" style="display: none;">
+                            <!-- Dynamic stone fields will be loaded here -->
+                        </div>
+                        <div class="form-group">
+                            <label>Stone Cost</label>
+                            <input type="text" class="form-control stone-cost" readonly>
+                        </div>
+                    </div>
+                `;
+                $('#stone-sections').append(newSection);
+            }
+
+            // Event handlers
+            $('#add-stone-btn').click(createStoneSection);
+
+            $(document).on('click', '.remove-stone', function() {
+                $(this).closest('.stone-section').remove();
+                calculateTotalStoneCost();
+            });
+
+            // Handle stone type selection
+            $(document).on('change', '.stonetype', function() {
+                const stoneSection = $(this).closest('.stone-section');
+                const detailsContainer = stoneSection.find('.stone-details-fields');
+                const selectedStoneType = $(this).find('option:selected').data('stone-type');
+                
+                if (selectedStoneType && stoneConfigs[selectedStoneType]) {
+                    const config = stoneConfigs[selectedStoneType];
+                    let fields = `
+                        <div class="form-group">
+                            <label>${config.weight.label} <span class="required">*</span></label>
+                            <input type="number" class="form-control stone-weight" name="stone_weight[]" 
+                                   step="${config.weight.step}" min="${config.weight.min}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>${config.count.label} <span class="required">*</span></label>
+                            <input type="number" class="form-control stone-count" name="stone_count[]" 
+                                   min="${config.count.min}" value="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>${config.quality.label} <span class="required">*</span></label>
+                            <select class="form-control stone-quality" name="stone_quality[]" required>
+                                <option value="">Select Quality</option>
+                                ${config.quality.options.map(opt => 
+                                    `<option value="${opt.value}">${opt.label}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Rate per Carat <span class="required">*</span></label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">₹</span>
+                                </div>
+                                <input type="text" class="form-control stone-rate" name="stone_rate[]" readonly required>
+                                <div class="input-group-append">
+                                    <span class="input-group-text">/carat</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    detailsContainer.html(fields).show();
+                    
+                    // If quality is already selected, fetch the rate
+                    const selectedQuality = detailsContainer.find('.stone-quality').val();
+                    if (selectedQuality) {
+                        fetchStoneRate(stoneSection);
+                    }
+                } else {
+                    detailsContainer.empty().hide();
+                }
+                calculateStoneCost(stoneSection);
+            });
+
+            // Handle stone quality selection
+            $(document).on('change', '.stone-quality', function() {
+                const stoneSection = $(this).closest('.stone-section');
+                fetchStoneRate(stoneSection);
+            });
+
+            // Function to fetch stone rate
+            function fetchStoneRate(stoneSection) {
+                const selectedStoneType = stoneSection.find('.stonetype option:selected').data('stone-type');
+                const selectedQuality = stoneSection.find('.stone-quality').val();
+                const weight = stoneSection.find('.stone-weight').val() || 0;
+                const count = stoneSection.find('.stone-count').val() || 1;
+                
+                if (selectedStoneType && selectedQuality) {
+                    // Make AJAX call to get stone rate
+                    $.get('{% url "get_stone_rate" %}', {
+                        stone_type: selectedStoneType,
+                        quality: selectedQuality,
+                        weight: weight,
+                        count: count
+                    })
+                    .done(function(response) {
+                        if (response.success) {
+                            stoneSection.find('.stone-rate').val(response.rate.toFixed(2));
+                            calculateStoneCost(stoneSection);
+                        }
+                    })
+                    .fail(function(error) {
+                        console.error('Error fetching stone rate:', error);
+                    });
+                }
+            }
+
+            // Calculate stone cost when inputs change
+            $(document).on('input change', '.stone-weight, .stone-count', function() {
+                const stoneSection = $(this).closest('.stone-section');
+                fetchStoneRate(stoneSection);
+            });
+
+            function calculateStoneCost(stoneSection) {
+                const weight = parseFloat(stoneSection.find('.stone-weight').val()) || 0;
+                const count = parseInt(stoneSection.find('.stone-count').val()) || 0;
+                const rate = parseFloat(stoneSection.find('.stone-rate').val()) || 0;
+                
+                const totalCost = weight * count * rate;
+                stoneSection.find('.stone-cost').val(totalCost.toFixed(2));
+                calculateTotalStoneCost();
+            }
+
+            function calculateTotalStoneCost() {
+                let total = 0;
+                $('.stone-cost').each(function() {
+                    total += parseFloat($(this).val()) || 0;
+                });
+                $('#total_stone_cost_display').val(total.toFixed(2));
+                $('#total_stone_cost').val(total.toFixed(2));
+                updateTotalPrice();
+            }
+
+            function updateTotalPrice() {
+                const metalCost = parseFloat($('#metal_cost').val()) || 0;
+                const stoneCost = parseFloat($('#total_stone_cost').val()) || 0;
+                const makingChargesPercentage = parseFloat($('#making_charges_percentage').val()) || 0;
+                
+                const makingCharges = (metalCost * makingChargesPercentage) / 100;
+                const totalPrice = metalCost + stoneCost + makingCharges;
+                
+                $('#making_charges_display').val(makingCharges.toFixed(2));
+                $('#making_charges').val(makingCharges.toFixed(2));
+                $('#total_price_display').val(totalPrice.toFixed(2));
+                $('#total_price').val(totalPrice.toFixed(2));
+            }
+
+            // Handle making charges percentage change
+            $('#making_charges_percentage').on('input', function() {
+                updateTotalPrice();
+            });
+
+            // Initialize calculations
+            updateMetalCost();
+            calculateTotalStoneCost();
+        });
+    </script>
 </body>
-</html>
+</html> 

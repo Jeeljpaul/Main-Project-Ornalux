@@ -1,0 +1,461 @@
+{% extends 'admin/navbar.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Vendor Products</h2>
+    
+    <div class="row">
+        {% for product in vendor_products %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                {% if product.images.main_image %}
+                    <img src="{{ product.images.main_image.url }}" class="card-img-top" alt="{{ product.product_name }}" style="height: 200px; object-fit: cover;">
+                {% else %}
+                    <img src="{% static 'images/no-image.jpg' %}" class="card-img-top" alt="No Image" style="height: 200px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.product_name }}</h5>
+                    <p class="card-text">
+                        <small>Vendor: {{ product.vendor.business_name }}</small><br>
+                        <small>Category: {{ product.category.name }}</small>
+                    </p>
+                    <button class="btn btn-primary" onclick="viewProductDetails('{{ product.vendor_product_id }}')">View Details</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Product Details Modal -->
+<div class="modal fade" id="productDetailsModal" tabindex="-1" aria-labelledby="productDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="productDetailsModalLabel">Product Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="productImages" class="carousel slide" data-bs-ride="carousel">
+                            <div class="carousel-inner" id="modalImageCarousel">
+                                <!-- Images will be inserted here by JavaScript -->
+                            </div>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#productImages" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#productImages" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h4 id="modalProductName"></h4>
+                        <p id="modalDescription"></p>
+                        
+                        <div class="mt-3">
+                            <h5>Metal Details</h5>
+                            <div id="modalMetalDetails"></div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h5>Stone Details</h5>
+                            <div id="modalStoneDetails"></div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h5>Additional Details</h5>
+                            <div id="modalAdditionalDetails"></div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h5>Attributes</h5>
+                            <div id="modalAttributes"></div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h5>Pricing</h5>
+                            <div id="modalPricing"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="initiateProductPurchase()">Purchase</button>
+            </div></div></div></div>
+<!-- Purchase Confirmation Modal -->
+<div class="modal fade" id="purchaseConfirmationModal" tabindex="-1" aria-labelledby="purchaseConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="purchaseConfirmationModalLabel">Confirm Purchase</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div class="mb-3">
+                    <label for="purchaseQuantity" class="form-label">Quantity</label>
+                    <input type="number" class="form-control" id="purchaseQuantity" value="1" min="1">
+                </div>
+                <div class="mb-3">
+                    <label for="expectedArrival" class="form-label">Expected Arrival Date</label>
+                    <input type="date" class="form-control" id="expectedArrival" required>
+                    <div class="invalid-feedback">
+                        Please select a future date.
+                    </div>
+                </div>
+                <div id="paymentOptionsDiv" style="display: none;">
+                    <div class="mb-3">
+                        <label for="paymentType" class="form-label">Payment Option</label>
+                        <select class="form-control" id="paymentType" onchange="updatePaymentAmount()">
+                            <option value="advance">Advance Payment</option>
+                            <option value="half">Half Payment</option>
+                            <option value="post">Post Delivery Payment</option>
+                        </select>
+                    </div>
+                    <div id="advanceAmountDiv" class="mb-3" style="display: none;">
+                        <label for="advanceAmount" class="form-label">Advance Amount (₹)</label>
+                        <input type="number" class="form-control" id="advanceAmount" min="0" step="0.01">
+                        <small class="text-muted">Enter the advance amount to be paid</small>
+                    </div>
+                </div>
+                <div id="purchaseSummary">
+                    <!-- Purchase summary will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmPurchase()">Send Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentProductId = null;
+let currentProductDetails = null;
+
+// Set minimum date for expected arrival to tomorrow
+function setMinDate() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const formattedDate = tomorrow.toISOString().split('T')[0];
+    document.getElementById('expectedArrival').min = formattedDate;
+}
+
+function viewProductDetails(productId) {
+    currentProductId = productId;
+    fetch(`/get-vendor-product-details/${productId}/`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Received data:', data);
+            currentProductDetails = data;  // Store the product details
+            // Update modal content
+            document.getElementById('modalProductName').textContent = data.product_name;
+            document.getElementById('modalDescription').textContent = data.product_description;
+            
+            // Update carousel images
+            const carousel = document.getElementById('modalImageCarousel');
+            carousel.innerHTML = '';
+            
+            // Add main image
+            if (data.images.main_image) {
+                const mainDiv = document.createElement('div');
+                mainDiv.className = 'carousel-item active';
+                mainDiv.innerHTML = `<img src="${data.images.main_image}" class="d-block w-100" alt="Main Image">`;
+                carousel.appendChild(mainDiv);
+            }
+            
+            // Add additional images
+            ['image2', 'image3', 'image4'].forEach(img => {
+                if (data.images[img]) {
+                    const div = document.createElement('div');
+                    div.className = 'carousel-item';
+                    div.innerHTML = `<img src="${data.images[img]}" class="d-block w-100" alt="Additional Image">`;
+                    carousel.appendChild(div);
+                }
+            });
+            
+            // Update metal details
+            const metalDetails = document.getElementById('modalMetalDetails');
+            metalDetails.innerHTML = `
+                <p>Type: ${data.metal_details.metal_type}</p>
+                <p>Purity: ${data.metal_details.purity}</p>
+                <p>Weight: ${data.metal_details.weight}g</p>
+                <p>Rate per gram: ₹${data.metal_details.rate_per_gram}</p>
+            `;
+            
+            // Update stone details
+            const stoneDetails = document.getElementById('modalStoneDetails');
+            stoneDetails.innerHTML = data.stones.map(stone => `
+                <p>${stone.stone_type} - ${stone.weight}ct (${stone.count} pieces)</p>
+                <p>Quality: ${stone.quality}</p>
+                <p>Rate per carat: ₹${stone.rate_per_carat}</p>
+            `).join('<hr>');
+            
+            // Update additional details
+            const additionalDetails = document.getElementById('modalAdditionalDetails');
+            additionalDetails.innerHTML = `
+                <p>Stock: ${data.additional_details.stock_quantity}</p>
+                <p>BIS Hallmark: ${data.additional_details.bis_hallmark || 'N/A'}</p>
+                <p>Estimated Delivery: ${data.additional_details.estimated_delivery} days</p>
+                <p>Gender: ${data.additional_details.gender}</p>
+                <p>Services: ${[
+                    data.additional_details.home_delivery ? 'Home Delivery' : '',
+                    data.additional_details.store_pickup ? 'Store Pickup' : '',
+                    data.additional_details.try_at_home ? 'Try at Home' : ''
+                ].filter(Boolean).join(', ')}</p>
+            `;
+            
+            // Update attributes
+            const attributes = document.getElementById('modalAttributes');
+            attributes.innerHTML = data.attributes.map(attr => 
+                `<p>${attr.attribute_name}: ${attr.attribute_value}</p>`
+            ).join('');
+            
+            // Update pricing
+            const pricing = document.getElementById('modalPricing');
+            pricing.innerHTML = `
+                <p>Metal Cost: ₹${data.pricing_details.metal_cost}</p>
+                <p>Stone Cost: ₹${data.pricing_details.stone_cost}</p>
+                <p>Making Charges (${data.pricing_details.making_charges_percentage}%): ₹${data.pricing_details.making_charges}</p>
+                <p><strong>Total Price: ₹${data.pricing_details.total_price}</strong></p>
+            `;
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('productDetailsModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error fetching product details:', error);
+            alert('Error loading product details');
+        });
+}
+
+function initiateProductPurchase() {
+    if (!currentProductDetails) {
+        alert('Product details not available');
+        return;
+    }
+
+    // Set minimum date when opening the purchase modal
+    setMinDate();
+
+    // Update purchase summary
+    const quantity = document.getElementById('purchaseQuantity').value;
+    const totalPrice = (parseFloat(currentProductDetails.pricing_details.total_price) * parseInt(quantity)).toFixed(2);
+    
+    document.getElementById('purchaseSummary').innerHTML = `
+        <div class="alert alert-info">
+            <h6>Purchase Summary</h6>
+            <p><strong>Product:</strong> ${currentProductDetails.product_name}</p>
+            <p><strong>Vendor:</strong> ${currentProductDetails.vendor}</p>
+            <p><strong>Quantity:</strong> ${quantity}</p>
+            <p><strong>Total Price:</strong> ₹${totalPrice}</p>
+            <p><strong>Amount to Pay:</strong> ₹${totalPrice}</p>
+        </div>
+    `;
+
+    // Hide the product details modal and show the purchase confirmation modal
+    const productModal = bootstrap.Modal.getInstance(document.getElementById('productDetailsModal'));
+    productModal.hide();
+    const purchaseModal = new bootstrap.Modal(document.getElementById('purchaseConfirmationModal'));
+    purchaseModal.show();
+}
+
+function updatePaymentAmount() {
+    const paymentType = document.getElementById('paymentType').value;
+    const advanceAmountDiv = document.getElementById('advanceAmountDiv');
+    const totalAmount = parseFloat(currentProductDetails.pricing_details.total_price) * 
+                       parseInt(document.getElementById('purchaseQuantity').value);
+
+    if (paymentType === 'advance') {
+        advanceAmountDiv.style.display = 'block';
+        document.getElementById('advanceAmount').max = totalAmount;
+    } else if (paymentType === 'half') {
+        advanceAmountDiv.style.display = 'none';
+    } else {
+        advanceAmountDiv.style.display = 'none';
+    }
+
+    updatePurchaseSummary();
+}
+
+function updatePurchaseSummary() {
+    const quantity = document.getElementById('purchaseQuantity').value;
+    const totalPrice = (parseFloat(currentProductDetails.pricing_details.total_price) * parseInt(quantity)).toFixed(2);
+    
+    let summaryHTML = `
+        <div class="alert alert-info">
+            <h6>Purchase Summary</h6>
+            <p><strong>Product:</strong> ${currentProductDetails.product_name}</p>
+            <p><strong>Vendor:</strong> ${currentProductDetails.vendor}</p>
+            <p><strong>Quantity:</strong> ${quantity}</p>
+            <p><strong>Total Price:</strong> ₹${totalPrice}</p>
+            <p><strong>Amount to Pay:</strong> ₹${totalPrice}</p>
+        </div>
+    `;
+
+    // Only add payment information if payment options are visible
+    if (document.getElementById('paymentOptionsDiv').style.display !== 'none') {
+        const paymentType = document.getElementById('paymentType').value;
+        let amountToPay = 0;
+
+        if (paymentType === 'advance') {
+            amountToPay = parseFloat(document.getElementById('advanceAmount').value || 0);
+        } else if (paymentType === 'half') {
+            amountToPay = totalPrice / 2;
+        }
+
+        summaryHTML = `
+            <div class="alert alert-info">
+                <h6>Purchase Summary</h6>
+                <p><strong>Product:</strong> ${currentProductDetails.product_name}</p>
+                <p><strong>Vendor:</strong> ${currentProductDetails.vendor}</p>
+                <p><strong>Quantity:</strong> ${quantity}</p>
+                <p><strong>Total Price:</strong> ₹${totalPrice}</p>
+                ${paymentType !== 'post' ? `<p><strong>Amount to Pay Now:</strong> ₹${amountToPay}</p>` : ''}
+                ${paymentType !== 'post' ? `<p><strong>Remaining Amount:</strong> ₹${(totalPrice - amountToPay).toFixed(2)}</p>` : ''}
+            </div>
+        `;
+    }
+
+    document.getElementById('purchaseSummary').innerHTML = summaryHTML;
+}
+
+function validatePurchaseForm() {
+    const quantity = document.getElementById('purchaseQuantity').value;
+    const expectedArrival = document.getElementById('expectedArrival').value;
+    
+    if (!quantity || quantity < 1) {
+        alert('Please enter a valid quantity');
+        return false;
+    }
+
+    if (!expectedArrival) {
+        alert('Please select an expected arrival date');
+        return false;
+    }
+
+    const selectedDate = new Date(expectedArrival);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    if (selectedDate < tomorrow) {
+        alert('Please select a future date');
+        return false;
+    }
+
+    // Only validate payment details if payment options are visible
+    const paymentOptionsDiv = document.getElementById('paymentOptionsDiv');
+    if (paymentOptionsDiv.style.display !== 'none') {
+        const paymentType = document.getElementById('paymentType').value;
+        if (paymentType === 'advance') {
+            const advanceAmount = parseFloat(document.getElementById('advanceAmount').value);
+            const totalAmount = parseFloat(currentProductDetails.pricing_details.total_price) * parseInt(quantity);
+            if (!advanceAmount || advanceAmount <= 0 || advanceAmount > totalAmount) {
+                alert('Please enter a valid advance amount');
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+function confirmPurchase() {
+    if (!validatePurchaseForm()) {
+        return;
+    }
+
+    const quantity = document.getElementById('purchaseQuantity').value;
+    const expectedArrival = document.getElementById('expectedArrival').value;
+    const purchaseData = {
+        vendor_product_id: currentProductId,
+        quantity: parseInt(quantity),
+        expected_arrival: expectedArrival,
+        payment_type: 'pending', // Initial state before vendor acceptance
+        total_amount: parseFloat(currentProductDetails.pricing_details.total_price) * parseInt(quantity),
+        amount_to_pay: 0 // Will be set after vendor acceptance
+    };
+
+    // Send purchase request without payment initially
+    sendPurchaseRequest(purchaseData);
+}
+
+function sendPurchaseRequest(purchaseData) {
+    fetch('/send_purchase_request/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(purchaseData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Purchase request sent successfully! Waiting for vendor approval.');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('purchaseConfirmationModal'));
+            modal.hide();
+        } else {
+            alert('Error sending purchase request: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error sending purchase request');
+    });
+}
+
+// Function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Initialize date validation when the document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listener for date input validation
+    const expectedArrivalInput = document.getElementById('expectedArrival');
+    expectedArrivalInput.addEventListener('change', function() {
+        const selectedDate = new Date(this.value);
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+
+        if (selectedDate < tomorrow) {
+            this.classList.add('is-invalid');
+            this.value = ''; // Clear invalid date
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+
+    // Add event listeners for amount updates
+    document.getElementById('purchaseQuantity').addEventListener('change', updatePurchaseSummary);
+    document.getElementById('advanceAmount').addEventListener('input', updatePurchaseSummary);
+});
+
+// Function to show payment options after vendor acceptance
+function showPaymentOptions(purchaseId) {
+    document.getElementById('paymentOptionsDiv').style.display = 'block';
+    updatePaymentAmount();
+}
+</script>
+{% endblock %} 

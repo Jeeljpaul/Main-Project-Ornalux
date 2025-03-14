@@ -99,7 +99,7 @@ urlpatterns = [
     path('staff/accept-booking/<int:booking_id>/', views.accept_booking, name='accept_booking'),
 
     path('gold-exchange/', views.gold_exchange_page, name='gold_exchange'),
-    path('gold_rates/', views.gold_rates_view, name='gold_rates'),
+    path('gold_rates/', views.gold_rates, name='gold_rates'),
     path('calculate_gold_value/', views.calculate_gold_value, name='calculate_gold_value'),
 
 
@@ -128,8 +128,7 @@ urlpatterns = [
     # Vendor URLs
     path('vendorhome/', views.vendor_home, name='vendor_home'),
     path('vendor/add-product/', views.vendor_add_product, name='vendor_add_product'),
-    path('vendor/view-products/', views.vendor_view_products, name='vendor_view_products'),
-    path('vendor/edit-product/<int:product_id>/', views.vendor_edit_product, name='vendor_edit_product'),
+    path('vendor/get-metal-rate/', views.get_metal_rate, name='get_metal_rate'),
     path('vendor/delete-product/<int:product_id>/', views.vendor_delete_product, name='vendor_delete_product'),
     path('vendor/pending-orders/', views.vendor_pending_orders, name='vendor_pending_orders'),
     path('vendor/order-history/', views.vendor_order_history, name='vendor_order_history'),
@@ -137,9 +136,12 @@ urlpatterns = [
     path('vendor/restock-requests/', views.vendor_restock_requests, name='vendor_restock_requests'),
     path('vendor/declined-orders/', views.vendor_declined_orders, name='vendor_declined_orders'),
     path('vendor/payment-details/', views.vendor_payment_details, name='vendor_payment_details'),
+    path('vendor/products/', views.vendor_products, name='vendor_products'),
     path('vendor/products/<int:product_id>/toggle-status/', views.vendor_toggle_product_status, name='vendor_toggle_product_status'),
+    path('vendor/products/<int:product_id>/edit/', views.vendor_edit_product, name='vendor_edit_product'),
     path('vendor/products/<int:product_id>/restock/', views.vendor_restock_product, name='vendor_restock_product'),
     path('vendor/products/<int:product_id>/cancel/', views.vendor_cancel_order, name='vendor_cancel_order'),
+    # path('vendor/products/<int:product_id>/edit/', views.vendor_edit_product, name='vendor_edit_product'),
 
     path('update_payment_status/<int:payment_id>/', views.update_payment_status, name='update_payment_status'),
     path('process_payment/', views.process_payment, name='process_payment'),
@@ -161,12 +163,67 @@ urlpatterns = [
 
     path('view_payments/', views.view_payments, name='view_payments'),  # New URL for viewing payments
 
+    path('find_ring_size/', views.find_ring_size, name='find_ring_size'),
+    path('predict-ring-size/', views.ring_size_prediction, name='ring_size_prediction'),
 
+    path('virtual-tryon/', views.virtual_tryon, name='virtual_tryon'),
 
+    path('get-products-by-category/<str:category>/', views.get_products_by_category, name='get_products_by_category'),
 
+    path('debug-categories/', views.debug_categories, name='debug_categories'),
 
+    path('add-review/<int:product_id>/', views.add_review, name='add_review'),
+    path('product/<int:product_id>/reviews/', views.view_product_reviews, name='view_product_reviews'),
 
-    
+    path('adminhome/reviews/', views.view_all_reviews, name='view_all_reviews'),
+
+    path('diamond_price/', views.get_diamond_price, name='diamond_price'),
+
+    path('get-stone-rate/', views.get_stone_rate, name='get_stone_rate'),
+
+    # Admin Vendor Products URLs
+    path('adminhome/vendor-products/', views.admin_vendor_products, name='admin_vendor_products'),
+    path('adminhome/vendor-product/<int:product_id>/', views.get_vendor_product_details, name='get_vendor_product_details'),
+    path('adminhome/purchase-requests/', views.admin_purchase_requests, name='admin_purchase_requests'),
+
+    # Vendor Metal Purity URLs
+    path('vendor/metal-purities/', views.vendor_metal_purities, name='vendor_metal_purities'),
+    path('vendor/metal-purities/edit/<int:purity_id>/', views.edit_metal_purity, name='edit_metal_purity'),
+    path('vendor/metal-purities/delete/<int:purity_id>/', views.delete_metal_purity, name='delete_metal_purity'),
+
+    # Stone Purity URLs
+    path('vendor/stone-purities/', views.vendor_stone_purities, name='vendor_stone_purities'),
+    path('vendor/stone-purities/edit/<int:purity_id>/', views.edit_stone_purity, name='edit_stone_purity'),
+    path('vendor/stone-purities/delete/<int:purity_id>/', views.delete_stone_purity, name='delete_stone_purity'),
+
+    # path('remove-background/', views.remove_background, name='remove_background'),
+
+    # path('vendor/dashboard/', views.vendor_dashboard, name='vendor_dashboard'),
+    # path('vendor/purchase-requests/<int:purchase_id>/<str:action>/', views.handle_purchase_request, name='handle_purchase_request'),
+    # path('vendor/purchase-requests/<int:purchase_id>/request-payment/', views.request_payment, name='request_payment'),
+
+    # path('get-date-update-details/<int:purchase_id>/', views.get_date_update_details, name='get_date_update_details'),
+    # path('get-payment-request-details/<int:purchase_id>/', views.get_payment_request_details, name='get_payment_request_details'),
+    # path('admin/handle-date-request/<int:purchase_id>/', views.admin_handle_date_request, name='admin_handle_date_request'),
+    # path('admin/process-vendor-payment/<int:purchase_id>/', views.process_vendor_payment, name='process_vendor_payment'),
+    # path('vendor/update-expected-arrival/<int:purchase_id>/', views.update_expected_arrival, name='update_expected_arrival'),
+    # path('admin/get-purchase-status/', views.get_purchase_status, name='get_purchase_status'),
+
+    path('vendor/purchase-requests/', views.vendor_purchase_requests, name='vendor_purchase_requests'),
+    path('vendor/update-purchase-status/<int:purchase_id>/', views.vendor_update_purchase_status, name='vendor_update_purchase_status'),
+    path('vendor/request-date-change/<int:purchase_id>/', views.vendor_request_date_change, name='vendor_request_date_change'),
+    path('vendor/request-payment/<int:purchase_id>/', views.vendor_request_payment, name='vendor_request_payment'),
+
+    path('adminhome/purchase-requests/', views.admin_purchase_requests, name='admin_purchase_requests'),
+    path('adminhome/update-purchase-status/<int:purchase_id>/', views.update_purchase_status, name='update_purchase_status'),
+    path('adminhome/update-date-change/<int:purchase_id>/', views.update_date_change_request, name='update_date_change_request'),
+    path('adminhome/get-purchase-details/<int:purchase_id>/', views.get_purchase_details, name='get_purchase_details'),
+    path('adminhome/process-payment/<int:purchase_id>/', views.process_payment, name='process_payment'),
+    path('adminhome/process-cod-payment/<int:purchase_id>/', views.process_cod_payment, name='process_cod_payment'),
+    path('adminhome/create-razorpay-order/<int:purchase_id>/', views.create_razorpay_order, name='create_razorpay_order'),
+    path('adminhome/verify-payment/<int:purchase_id>/', views.verify_payment, name='verify_payment'),
+
+   
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

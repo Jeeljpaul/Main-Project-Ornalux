@@ -73,6 +73,32 @@
             background-color: #e9ecef; /* Light navbar background */
         }
 
+        .current-image {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        
+        .current-image img {
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .current-video {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        
+        .image-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+        }
+
     </style>
 </head>
 <body>
@@ -189,6 +215,46 @@
                 </div>
     
                 <div class="form-group">
+                    <label for="id_bis_hallmark">BIS Hallmark Number</label>
+                    <input type="text" class="form-control" id="id_bis_hallmark" name="bis_hallmark" 
+                           placeholder="Enter BIS hallmark number" value="{{ product.bis_hallmark }}">
+                    <small class="form-text text-muted">Optional: Enter the BIS hallmark certification number</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_making_charges">Making Charges (₹) <span class="required">*</span></label>
+                    <input type="number" class="form-control" id="id_making_charges" name="making_charges" 
+                           min="0" step="0.01" required value="{{ product.making_charges }}">
+                    <small class="form-text text-muted">Enter the making charges for this product</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_diamond_weight">Diamond Weight (carats)</label>
+                    <input type="number" class="form-control" id="id_diamond_weight" name="diamond_weight" 
+                           min="0" step="0.01" value="{{ product.diamond_weight }}">
+                    <small class="form-text text-muted">Enter the diamond weight in carats (if applicable)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_diamond_quality">Diamond Quality</label>
+                    <select class="form-control" id="id_diamond_quality" name="diamond_quality">
+                        <option value="">Select Diamond Quality</option>
+                        <option value="IJ-SI" {% if product.diamond_quality == "IJ-SI" %}selected{% endif %}>IJ-SI</option>
+                        <option value="GH-VS" {% if product.diamond_quality == "GH-VS" %}selected{% endif %}>GH-VS</option>
+                        <option value="GH-SI" {% if product.diamond_quality == "GH-SI" %}selected{% endif %}>GH-SI</option>
+                        <option value="EF-VVS" {% if product.diamond_quality == "EF-VVS" %}selected{% endif %}>EF-VVS</option>
+                    </select>
+                    <small class="form-text text-muted">Select the diamond quality (if applicable)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_estimated_delivery">Estimated Delivery (days) <span class="required">*</span></label>
+                    <input type="number" class="form-control" id="id_estimated_delivery" name="estimated_delivery" 
+                           min="1" max="30" value="{{ product.estimated_delivery }}" required>
+                    <small class="form-text text-muted">Enter the estimated delivery time in days</small>
+                </div>
+    
+                <div class="form-group">
                     <label for="id_product_description">Description</label>
                     <textarea class="form-control" id="id_product_description" name="product_description" required>{{ product.product_description }}</textarea>
                 </div>
@@ -270,17 +336,77 @@
 
 
                 <div class="form-group">
-                    <label for="id_image">Image</label>
-                    
-                    <!-- Display the current image if it exists -->
+                    <label for="id_image">Main Product Image</label>
                     {% if product.images %}
-                        <div>
-                            <img src="{{ product.images.url }}" alt="Current Image" style="max-width: 150px; max-height: 150px;">
-                        </div>
+                    <div class="current-image mb-2">
+                        <img src="{{ product.images.url }}" alt="Current Main Image" style="max-width: 200px; max-height: 200px;">
+                        <p class="text-muted">Current main image</p>
+                    </div>
                     {% endif %}
-                    
-                    <!-- File input field to upload a new image -->
-                    <input type="file" class="form-control" id="id_image" name="image">
+                    <input type="file" class="form-control-file" id="id_image" name="image" 
+                           accept=".jpg,.jpeg,.png" onchange="validateImageFile(this)">
+                    <small class="form-text text-muted">Upload new image to replace current one (JPG, JPEG, PNG)</small>
+                </div>
+                
+                
+    
+                <!-- Additional Images -->
+                <div id="additional-images-container">
+                    <!-- Image 2 -->
+                    <div class="form-group image-group">
+                        <label>Additional Image 2</label>
+                        {% if product.image2 %}
+                        <div class="current-image mb-2">
+                            <img src="{{ product.image2.url }}" alt="Current Image 2" style="max-width: 200px; max-height: 200px;">
+                            <p class="text-muted">Current additional image 2</p>
+                        </div>
+                        {% endif %}
+                        <input type="file" class="form-control-file" name="image2" 
+                               accept=".jpg,.jpeg,.png" onchange="validateImageFile(this)">
+                    </div>
+
+                    <!-- Image 3 -->
+                    <div class="form-group image-group">
+                        <label>Additional Image 3</label>
+                        {% if product.image3 %}
+                        <div class="current-image mb-2">
+                            <img src="{{ product.image3.url }}" alt="Current Image 3" style="max-width: 200px; max-height: 200px;">
+                            <p class="text-muted">Current additional image 3</p>
+                        </div>
+                        {% endif %}
+                        <input type="file" class="form-control-file" name="image3" 
+                               accept=".jpg,.jpeg,.png" onchange="validateImageFile(this)">
+                    </div>
+
+                    <!-- Image 4 -->
+                    <div class="form-group image-group">
+                        <label>Additional Image 4</label>
+                        {% if product.image4 %}
+                        <div class="current-image mb-2">
+                            <img src="{{ product.image4.url }}" alt="Current Image 4" style="max-width: 200px; max-height: 200px;">
+                            <p class="text-muted">Current additional image 4</p>
+                        </div>
+                        {% endif %}
+                        <input type="file" class="form-control-file" name="image4" 
+                               accept=".jpg,.jpeg,.png" onchange="validateImageFile(this)">
+                    </div>
+                </div>
+
+                <!-- Product Video -->
+                <div class="form-group">
+                    <label for="id_product_video">Product Video</label>
+                    {% if product.product_video %}
+                    <div class="current-video mb-2">
+                        <video width="320" height="240" controls>
+                            <source src="{{ product.product_video.url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <p class="text-muted">Current product video</p>
+                    </div>
+                    {% endif %}
+                    <input type="file" class="form-control-file" id="id_product_video" 
+                           name="product_video" accept="video/mp4" onchange="validateVideoFile(this)">
+                    <small class="form-text text-muted">Upload new video to replace current one (MP4 only, max 50MB)</small>
                 </div>
                 
                 
@@ -295,47 +421,53 @@
             function loadAttributes() {
                 const categoryId = document.getElementById('id_category').value;
                 if (!categoryId) {
-                    $('#attributes-container').html('<p style="color:red;">Please select a category to load its attributes.</p>');
+                    document.getElementById('attributes-container').innerHTML = '';
                     return;
                 }
     
                 $.ajax({
                     url: `/get_category_attributes/${categoryId}/`,
                     type: 'GET',
-                    dataType: 'json',
-                    success: function (response) {
-                        displayAttributes(response);
+                    success: function(response) {
+                        let html = '';
+                        
+                        response.attributes.forEach(function(attr) {
+                            // Get existing attribute value if any
+                            const existingValue = productAttributes[attr.id] || '';
+                            
+                            html += `
+                                <div class="form-group">
+                                    <label for="attribute_${attr.id}">${attr.name}</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="attribute_${attr.id}" 
+                                           name="attribute_${attr.id}" 
+                                           value="${existingValue}"
+                                           placeholder="Enter ${attr.name}">
+                                    <input type="hidden" name="attributes" value="${attr.id}">
+                                </div>
+                            `;
+                        });
+                        
+                        document.getElementById('attributes-container').innerHTML = html;
                     },
-                    error: function (xhr, status, error) {
-                        console.error('Error fetching category attributes:', error);
-                        $('#attributes-container').html('<p style="color:red;">Error fetching attributes. Please try again.</p>');
+                    error: function(xhr, status, error) {
+                        console.error("Error loading attributes:", error);
+                        document.getElementById('attributes-container').innerHTML = 
+                            '<p class="text-danger">Error loading category attributes</p>';
                     }
                 });
             }
     
-            function displayAttributes(data) {
-                const attributesContainer = $('#attributes-container');
-                attributesContainer.empty();
+            // Add this script to store existing product attributes
+            const productAttributes = {
+                {% for attr in product.productattribute_set.all %}
+                    {{ attr.attribute_name.id }}: "{{ attr.attribute_value }}",
+                {% endfor %}
+            };
     
-                if (data && data.attributes && data.attributes.length > 0) {
-                    let attributesHtml = '';
-                    data.attributes.forEach(function (attribute) {
-                        attributesHtml += `
-                            <div class="form-group">
-                                <label>${attribute.name}</label>
-                                <input type="text" class="form-control" name="attribute_${attribute.id}" value="${attribute.value || ''}" />
-                                <input type="hidden" name="attributes" value="${attribute.id}" />
-                            </div>
-                        `;
-                    });
-                    attributesContainer.html(attributesHtml);
-                } else {
-                    attributesContainer.html('<p>No attributes found for this category.</p>');
-                }
-            }
-    
-            $(document).ready(function () {
-                // Load attributes for the initial product category on page load
+            // Load attributes when page loads
+            document.addEventListener('DOMContentLoaded', function() {
                 loadAttributes();
             });
         </script>

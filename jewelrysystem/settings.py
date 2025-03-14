@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import mimetypes
 
 load_dotenv()
 
@@ -19,6 +20,7 @@ SECRET_KEY = 'django-insecure-7ac1#6p@u*6eibbh(cafy0@@fdr-w8buz73_h$^hqp$rde)529
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+
 
 ALLOWED_HOSTS = ['*']
 
@@ -51,6 +53,12 @@ MIDDLEWARE = [
     'social_django.middleware.SocialAuthExceptionMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware'
 ]
+
+# Add WebAssembly MIME type
+MIDDLEWARE.append('django.middleware.common.CommonMiddleware')
+
+# Add MIME type configuration
+mimetypes.add_type('application/wasm', '.wasm')
 
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',  
@@ -206,9 +214,45 @@ RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET')
 # Google Cloud Vision Settings
 GOOGLE_CLOUD_CREDENTIALS = os.path.join(BASE_DIR, 'credentials', 'google-cloud-credentials.json')
 if os.path.exists(GOOGLE_CLOUD_CREDENTIALS):
-    os.environ['GOOGLE_API_KEY'] = GOOGLE_CLOUD_CREDENTIALS
-else:
-    print("Warning: Google Cloud credentials file not found!")
+    os.environ['GOOGLE_CLOUD_CREDENTIALS'] = GOOGLE_CLOUD_CREDENTIALS
 
-# Google API Configuration
-GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+# Separate Google API keys for different services
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', '')  # For Maps and other Google services
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')  # Specifically for Gemini AI
+
+if not GEMINI_API_KEY:
+    print("Warning: GEMINI_API_KEY not found in environment variables! Gemini AI features will use fallback data.")
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS'
+]
+
+# Add MIME type for GLTF files
+mimetypes.add_type('model/gltf+json', '.gltf')
+mimetypes.add_type('model/gltf-binary', '.glb')
+
+GOLD_API_KEY = os.environ.get('GOLD_API_KEY')  # You're using this key in views.py
+
+
+# Add fallback configurations
+PRICE_SETTINGS = {
+    'GOLD_RATE_CACHE_TIMEOUT': 3600,  # 1 hour
+    'DEFAULT_GOLD_RATE': 5500,  # Default gold rate per gram
+    'MAKING_CHARGES_PERCENTAGE': 8,
+    'GST_PERCENTAGE': 3,
+    'DIAMOND_BASE_PRICES': {
+        'IJ-SI': 40000,
+        'GH-VS': 60000,
+        'GH-SI': 50000,
+        'EF-VVS': 80000
+    },
+    'MARKET_ADJUSTMENT': 1.0  # Can be updated based on market conditions
+}
+
+PERFECT_CORP_API_KEY = os.environ.get('PERFECT_CORP_API_KEY')  # Replace with actual API key

@@ -1,0 +1,707 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% csrf_token %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Purchase Requests - Vendor Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'css/vendor_styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        /* Sidebar Styles */
+        #wrapper {
+            overflow-x: hidden;
+        }
+
+        #sidebar-wrapper {
+            min-height: 100vh;
+            margin-left: -15rem;
+            transition: margin .25s ease-out;
+            width: 15rem;
+        }
+
+        #sidebar-wrapper .sidebar-heading {
+            padding: 0.875rem 1.25rem;
+            font-size: 1.2rem;
+        }
+
+        #sidebar-wrapper .list-group {
+            width: 15rem;
+        }
+
+        .list-group-item {
+            border: none;
+            padding: 0.75rem 1.25rem;
+        }
+
+        .list-group-item.active {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .list-group-item:hover {
+            background-color: #f8f9fa;
+            color: #007bff;
+        }
+
+        #page-content-wrapper {
+            min-width: 100vw;
+        }
+
+        .wrapper.toggled #sidebar-wrapper {
+            margin-left: 0;
+        }
+
+        @media (min-width: 768px) {
+            #sidebar-wrapper {
+                margin-left: 0;
+            }
+
+            #page-content-wrapper {
+                min-width: 0;
+                width: 100%;
+            }
+
+            .wrapper.toggled #sidebar-wrapper {
+                margin-left: -15rem;
+            }
+        }
+
+        /* Accordion Styles */
+        .accordion .card {
+            border: none;
+            background: transparent;
+        }
+
+        .accordion .card-header {
+            background: transparent;
+            padding: 0;
+            border: none;
+        }
+
+        .accordion .btn-link {
+            color: #333;
+            text-decoration: none;
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1.25rem;
+        }
+
+        .accordion .btn-link:hover,
+        .accordion .btn-link:focus {
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .accordion .card-body {
+            padding: 0;
+        }
+
+        .accordion .card-body .list-group-item {
+            padding-left: 2rem;
+        }
+
+        /* Additional Styles for Purchase Requests */
+        .table {
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .table thead th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .badge {
+            padding: 0.5em 0.75em;
+        }
+
+        .btn-group .btn {
+            margin-right: 5px;
+        }
+
+        .card {
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .messages {
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            margin-bottom: 10px;
+        }
+
+        .modal-content {
+            border: none;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex" id="wrapper">
+        <!-- Sidebar -->
+        <div class="bg-light border-right" id="sidebar-wrapper">
+            <div class="sidebar-heading">Vendor Dashboard</div>
+            <div class="list-group list-group-flush">
+                <!-- Dashboard Link -->
+                <a href="{% url 'vendor_home' %}" class="list-group-item">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <div class="accordion" id="sidebarAccordion">
+                    <!-- Product Management -->
+                    <div class="card">
+                        <div class="card-header" id="productManagement">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseProducts">
+                                    <i class="fas fa-box"></i> Product Management
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseProducts" class="collapse" data-parent="#sidebarAccordion">
+                            <div class="card-body">
+                                <a href="{% url 'vendor_add_product' %}" class="list-group-item">
+                                    <i class="fas fa-plus"></i> Add Product
+                                </a>
+                                <a href="{% url 'vendor_products' %}" class="list-group-item">
+                                    <i class="fas fa-list"></i> View Products
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Order Management -->
+                    <div class="card">
+                        <div class="card-header" id="orderManagement">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseOrders">
+                                    <i class="fas fa-shopping-cart"></i> Order Management
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseOrders" class="collapse show" data-parent="#sidebarAccordion">
+                            <div class="card-body">
+                                <a href="{% url 'vendor_pending_orders' %}" class="list-group-item">
+                                    <i class="fas fa-clock"></i> Pending Orders
+                                </a>
+                                <a href="{% url 'vendor_order_history' %}" class="list-group-item">
+                                    <i class="fas fa-history"></i> Order History
+                                </a>
+                                <a href="{% url 'vendor_purchase_requests' %}" class="list-group-item active">
+                                    <i class="fas fa-shopping-basket"></i> Purchase Requests
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Logout Button -->
+                <a href="{% url 'logout' %}" class="list-group-item text-danger mt-auto">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Page Content -->
+        <div id="page-content-wrapper">
+            <div class="container-fluid">
+                <h2 class="mb-4">Purchase Requests</h2>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Quantity</th>
+                            <th>Total Amount</th>
+                            <th>Expected Arrival</th>
+                            <th>Request Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for purchase in purchases %}
+                        <tr>
+                            <td>{{ purchase.product_name }}</td>
+                            <td>{{ purchase.quantity }}</td>
+                            <td>₹{{ purchase.total_amount }}</td>
+                            <td>{{ purchase.expected_arrival }}</td>
+                            <td>{{ purchase.purchase_date|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge badge-{{ purchase.status|yesno:'success,warning,danger' }}">
+                                    {{ purchase.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if purchase.status == 'pending' %}
+                                    {% if purchase.has_date_update_request %}
+                                    <div class="text-warning">
+                                        <i class="fas fa-clock"></i> Date Change Requested
+                                    </div>
+                                    {% else %}
+                                    <div class="btn-group">
+                                        <button class="btn btn-success btn-sm" 
+                                                onclick="handlePurchaseAction({{ purchase.id }}, 'accept')">
+                                            <i class="fas fa-check"></i> Accept
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" 
+                                                onclick="handlePurchaseAction({{ purchase.id }}, 'reject')">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                        <button class="btn btn-warning btn-sm"
+                                                onclick="showDateChangeModal({{ purchase.id }})">
+                                            <i class="fas fa-calendar-alt"></i> Change Date
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                {% elif purchase.status == 'accepted' %}
+                                    {% if purchase.payment_requested %}
+                                        <div class="text-info mb-2">
+                                            <i class="fas fa-info-circle"></i> Payment Request Sent
+                                        </div>
+                                        {% if purchase.payment_status == 'partial' %}
+                                            <div class="text-warning">
+                                                <i class="fas fa-clock"></i> Waiting for Remaining Payment
+                                            </div>
+                                        {% endif %}
+                                    {% elif purchase.payment_status == 'full' %}
+                                        <div class="text-success mb-2">
+                                            <i class="fas fa-check-circle"></i> Full Payment Received (₹{{ purchase.total_amount }})
+                                        </div>
+                                        <button class="btn btn-danger btn-sm" 
+                                                onclick="handleCancelRequest({{ purchase.id }})">
+                                            <i class="fas fa-times"></i> Cancel Order
+                                        </button>
+                                    {% elif purchase.payment_status == 'partial' %}
+                                        <div class="text-info mb-2">
+                                            <i class="fas fa-info-circle"></i> Advance Paid: ₹{{ purchase.paid_amount }}
+                                            <br>
+                                            <small>Remaining: ₹{{ purchase.remaining_amount }}</small>
+                                        </div>
+                                        <button class="btn btn-primary btn-sm"
+                                                onclick="showPaymentRequestModal({{ purchase.id }}, {{ purchase.remaining_amount }})">
+                                            <i class="fas fa-money-bill"></i> Request Remaining Payment
+                                        </button>
+                                    {% elif purchase.payment_status == 'cod' %}
+                                        <div class="text-warning mb-2">
+                                            <i class="fas fa-truck"></i> Cash on Delivery
+                                        </div>
+                                        <button class="btn btn-success btn-sm"
+                                                onclick="markAsPaid({{ purchase.id }}, {{ purchase.total_amount }})">
+                                            <i class="fas fa-check"></i> Mark as Paid
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-primary btn-sm"
+                                                onclick="showPaymentRequestModal({{ purchase.id }}, {{ purchase.total_amount }})">
+                                            <i class="fas fa-money-bill"></i> Request Payment
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No purchase requests found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Date Change Request Modal -->
+<div class="modal fade" id="dateChangeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Date Change</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="dateChangeForm">
+                    <div class="form-group">
+                        <label for="newDeliveryDate">New Delivery Date</label>
+                        <input type="date" class="form-control" id="newDeliveryDate" required>
+                        <div class="invalid-feedback">
+                            Please select a future date.
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="dateChangeReason">Reason for Change</label>
+                        <textarea class="form-control" id="dateChangeReason" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitDateChangeRequest()">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Request Modal -->
+<div class="modal fade" id="paymentRequestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Payment</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="paymentRequestForm">
+                    <div class="form-group">
+                        <label for="paymentAmount">Amount to Request</label>
+                        <input type="number" class="form-control" id="paymentAmount" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="paymentNotes">Additional Notes</label>
+                        <textarea class="form-control" id="paymentNotes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitPaymentRequest()">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Action</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmationMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmActionBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% block extra_js %}
+<script>
+let currentPurchaseId = null;
+
+function showDateChangeModal(purchaseId) {
+    currentPurchaseId = purchaseId;
+    $('#dateChangeModal').modal('show');
+    
+    // Set minimum date to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('newDeliveryDate').min = tomorrow.toISOString().split('T')[0];
+}
+
+function showPaymentRequestModal(purchaseId, remainingAmount) {
+    currentPurchaseId = purchaseId;
+    
+    // Pre-fill the amount field with the remaining amount
+    document.getElementById('paymentAmount').value = remainingAmount;
+    
+    // Set max amount to prevent overcharging
+    document.getElementById('paymentAmount').max = remainingAmount;
+    
+    $('#paymentRequestModal').modal('show');
+}
+
+function submitDateChangeRequest() {
+    const newDate = document.getElementById('newDeliveryDate').value;
+    const reason = document.getElementById('dateChangeReason').value;
+
+    if (!newDate || !reason) {
+        alert('Please fill in all required fields');
+        return;
+    }
+
+    fetch(`/vendor/request-date-change/${currentPurchaseId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            new_date: newDate,
+            reason: reason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        $('#dateChangeModal').modal('hide');
+        if (data.status === 'success') {
+            showSuccessMessage('Date change request sent successfully');
+        } else {
+            showErrorMessage(data.message || 'Failed to send date change request');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showErrorMessage('Failed to send date change request');
+    });
+}
+
+function submitPaymentRequest() {
+    const amount = document.getElementById('paymentAmount').value;
+    const notes = document.getElementById('paymentNotes').value;
+
+    if (!amount) {
+        showErrorMessage('Please enter the payment amount');
+        return;
+    }
+
+    // Show confirmation modal before proceeding
+    $('#confirmationMessage').text(`Are you sure you want to request payment of ₹${amount}?`);
+    $('#confirmActionBtn').off('click').on('click', function() {
+        $('#confirmationModal').modal('hide');
+        
+        fetch(`/vendor/request-payment/${currentPurchaseId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                amount: parseFloat(amount),
+                notes: notes
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            $('#paymentRequestModal').modal('hide');
+            if (data.status === 'success') {
+                // Only update UI if payment record was created successfully
+                const row = document.querySelector(`button[onclick*="${currentPurchaseId}"]`).closest('tr');
+                const actionsCell = row.querySelector('td:nth-child(7)');
+                actionsCell.innerHTML = `
+                    <div class="text-info mb-2">
+                        <i class="fas fa-info-circle"></i> Payment Request Sent
+                    </div>
+                    <div class="text-muted">
+                        <small>Requested Amount: ₹${amount}</small>
+                    </div>
+                `;
+                showSuccessMessage('Payment request sent successfully');
+                
+                // Optionally reload the page to ensure data is fresh
+                // location.reload();
+            } else {
+                showErrorMessage(data.message || 'Failed to send payment request');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showErrorMessage('Failed to send payment request');
+        });
+    });
+
+    $('#confirmationModal').modal('show');
+}
+
+function handlePurchaseAction(purchaseId, action) {
+    currentPurchaseId = purchaseId;
+    const messages = {
+        'accept': 'Are you sure you want to accept this purchase request?',
+        'reject': 'Are you sure you want to reject this purchase request?'
+    };
+
+    $('#confirmationMessage').text(messages[action]);
+    $('#confirmActionBtn').off('click').on('click', function() {
+        $('#confirmationModal').modal('hide');
+        
+        console.log('Sending request to update purchase status:', {
+            purchaseId,
+            action,
+            status: action === 'accept' ? 'accepted' : 'rejected'
+        });
+        
+        fetch(`/vendor/update-purchase-status/${purchaseId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                status: action === 'accept' ? 'accepted' : 'rejected'
+            })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.status === 'success') {
+                showSuccessMessage(data.message);
+                
+                // Update UI dynamically if accepted
+                if (action === 'accept') {
+                    const row = document.querySelector(`button[onclick*="${purchaseId}"]`).closest('tr');
+                    
+                    // Update status badge
+                    const statusCell = row.querySelector('td:nth-child(6)');
+                    statusCell.innerHTML = '<span class="badge badge-success">Accepted</span>';
+                    
+                    // Update actions cell
+                    const actionsCell = row.querySelector('td:nth-child(7)');
+                    actionsCell.innerHTML = `
+                        <button class="btn btn-primary btn-sm" onclick="showPaymentRequestModal(${purchaseId}, ${data.total_amount})">
+                            <i class="fas fa-money-bill"></i> Request Payment
+                        </button>
+                    `;
+                } else {
+                    location.reload();
+                }
+            } else {
+                showErrorMessage(data.message || `Failed to ${action} purchase request`);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showErrorMessage(`Failed to ${action} purchase request`);
+        });
+    });
+
+    $('#confirmationModal').modal('show');
+}
+
+function handleCancelRequest(purchaseId) {
+    $('#confirmationMessage').text('Are you sure you want to cancel this order? This action cannot be undone.');
+    $('#confirmActionBtn').off('click').on('click', function() {
+        $('#confirmationModal').modal('hide');
+        
+        fetch(`/vendor/cancel-purchase/${purchaseId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showSuccessMessage('Order cancelled successfully');
+                location.reload();
+            } else {
+                showErrorMessage(data.message || 'Failed to cancel order');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showErrorMessage('Failed to cancel order');
+        });
+    });
+
+    $('#confirmationModal').modal('show');
+}
+
+function markAsPaid(purchaseId, amount) {
+    $('#confirmationMessage').text(`Are you sure you want to mark this order as paid (₹${amount})?`);
+    $('#confirmActionBtn').off('click').on('click', function() {
+        $('#confirmationModal').modal('hide');
+        
+        fetch(`/vendor/mark-as-paid/${purchaseId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                amount: parseFloat(amount)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showSuccessMessage('Order marked as paid successfully');
+                location.reload();
+            } else {
+                showErrorMessage(data.message || 'Failed to mark order as paid');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showErrorMessage('Failed to mark order as paid');
+        });
+    });
+
+    $('#confirmationModal').modal('show');
+}
+
+function showSuccessMessage(message) {
+    const alert = `<div class="alert alert-success alert-dismissible fade show">
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+    </div>`;
+    $('.messages').html(alert);
+}
+
+function showErrorMessage(message) {
+    const alert = `<div class="alert alert-danger alert-dismissible fade show">
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+    </div>`;
+    $('.messages').html(alert);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

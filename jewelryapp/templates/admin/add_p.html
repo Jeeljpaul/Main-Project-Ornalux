@@ -146,6 +146,47 @@
             color: red;
             font-size: 0.875rem;
         }
+
+        .messages {
+            margin-bottom: 20px;
+        }
+        
+        .alert {
+            position: relative;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            border-radius: 0.25rem;
+            opacity: 1;
+            transition: opacity 0.15s linear;
+        }
+        
+        .alert-dismissible {
+            padding-right: 4rem;
+        }
+
+        .alert-dismissible .close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 1rem 1.5rem;
+            color: inherit;
+            background: transparent;
+            border: 0;
+            cursor: pointer;
+        }
+
+        .alert .close:hover {
+            opacity: 0.75;
+        }
+
+        .close {
+            float: right;
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1;
+            text-shadow: 0 1px 0 #fff;
+        }
     </style>
     <script>
         function validateForm(event) {
@@ -261,6 +302,41 @@
             imageInput.value = ''; // Clear the input field if the validation fails
         }
 
+            // Validate making charges
+            const makingCharges = parseFloat(document.getElementById('id_making_charges').value);
+            if (isNaN(makingCharges) || makingCharges < 0) {
+                errors.push("Making charges must be a positive number");
+                isValid = false;
+            }
+
+            // Validate diamond weight
+            const diamondWeight = parseFloat(document.getElementById('id_diamond_weight').value);
+            if (diamondWeight && (isNaN(diamondWeight) || diamondWeight < 0)) {
+                errors.push("Diamond weight must be a positive number");
+                isValid = false;
+            }
+
+            // Validate estimated delivery
+            const estimatedDelivery = parseInt(document.getElementById('id_estimated_delivery').value);
+            if (isNaN(estimatedDelivery) || estimatedDelivery < 1 || estimatedDelivery > 30) {
+                errors.push("Estimated delivery must be between 1 and 30 days");
+                isValid = false;
+            }
+
+            // Validate ratings
+            const ratings = parseFloat(document.getElementById('id_ratings').value);
+            if (ratings && (isNaN(ratings) || ratings < 0 || ratings > 5)) {
+                errors.push("Rating must be between 0 and 5");
+                isValid = false;
+            }
+
+            // Validate total ratings
+            const totalRatings = parseInt(document.getElementById('id_total_ratings').value);
+            if (totalRatings && (isNaN(totalRatings) || totalRatings < 0)) {
+                errors.push("Total ratings must be a positive number");
+                isValid = false;
+            }
+
             // Display errors if any
             const errorContainer = document.getElementById('error-messages');
             errorContainer.innerHTML = '';
@@ -278,51 +354,43 @@
     
             // Function to fetch category attributes when a category is selected
 function loadAttributes() {
-                const categoryId = document.getElementById('id_category').value;// Get the selected category ID
-                console.log("category",categoryId)
-                // Perform the AJAX request to fetch category attributes
+                const categoryId = document.getElementById('id_category').value;
+                console.log("Selected category ID:", categoryId); // Debug log
+
                 if (!categoryId) {
-    console.error('Category ID is not defined.');
-    $('#attributes-container').html('<p style="color:red;">Invalid category ID. Please select a valid category.</p>');
-    return; // Exit the function if categoryId is not valid
-}
-
-$.ajax({
-    url: `/get_category_attributes/${categoryId}/`,
-    type: 'GET',
-    dataType: 'json',
-    success: function (response) {
-        console.log(response);
-        displayAttributes(response);
-    },
-    error: function (xhr, status, error) {
-        console.error('Error fetching category attributes:', error);
-        $('#attributes-container').html(`<p style="color:red;">Error fetching attributes. Please try again.</p>`);
-    }
-});
-
-            };
-
-            // Function to display category attributes on the page
-            function displayAttributes(data) {
-                const attributesContainer = $('#attributes-container'); // Select the attributes container
-                attributesContainer.empty(); // Clear previous attributes
-
-                if (data && data.attributes && data.attributes.length > 0) {
-                    let attributesHtml = '';
-                    data.attributes.forEach(function (attribute) {
-                        attributesHtml += `
-                            <div class="form-group">
-                                <label>${attribute.name}</label>
-                                <input type="text" class="form-control" name="attribute_${attribute.id}" value="${attribute.value || ''}" /> <!-- Assuming attribute.value holds the value -->
-                                <input type="hidden" name="attributes" value="${attribute.id}" /> <!-- Hidden input to store attribute ID -->
-                            </div>
-                        `; // Create a read-only input for each attribute
-                     });
-                     attributesContainer.html(attributesHtml); // Insert the generated HTML into the attributes container
-                } else {
-                    attributesContainer.html('<p>No attributes found for this category.</p>'); // Message when no attributes are found
+                    document.getElementById('attributes-container').innerHTML = '';
+                    return;
                 }
+
+                $.ajax({
+                    url: `/get_category_attributes/${categoryId}/`,
+                    type: 'GET',
+                    success: function(response) {
+                        console.log("Received attributes:", response); // Debug log
+                        let html = '';
+                        
+                        response.attributes.forEach(function(attr) {
+                            html += `
+                                <div class="form-group">
+                                    <label for="attribute_${attr.id}">${attr.name}</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="attribute_${attr.id}" 
+                                           name="attribute_${attr.id}" 
+                                           placeholder="Enter ${attr.name}">
+                                    <input type="hidden" name="attributes" value="${attr.id}">
+                                </div>
+                            `;
+                        });
+                        
+                        document.getElementById('attributes-container').innerHTML = html;
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error loading attributes:", error); // Debug log
+                        document.getElementById('attributes-container').innerHTML = 
+                            '<p class="text-danger">Error loading category attributes</p>';
+                    }
+                });
             }
 
         
@@ -405,6 +473,19 @@ $.ajax({
     <div class="container mt-5">
         <h2>Add New Product</h2>
         <div id="error-messages"></div>
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                <strong>{% if message.tags == 'error' %}Error!{% else %}{{ message.tags|title }}!{% endif %}</strong>
+                <pre class="mb-0" style="white-space: pre-wrap;">{{ message }}</pre>
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
         <form method="POST" enctype="multipart/form-data" onsubmit="validateForm(event)">
             {% csrf_token %}
             <div class="form-group">
@@ -421,7 +502,10 @@ $.ajax({
                 </select>
             </div>
 
-            <div id="attributes-container" class="form-group"></div> <!-- Container for category attributes -->
+            <!-- Container for dynamic attributes -->
+            <div id="attributes-container" class="form-group">
+                <!-- Attributes will be loaded here dynamically -->
+            </div>
 
             <div class="form-group">
                 <label for="id_product_description">Product Description <span class="required">*</span></label>
@@ -441,6 +525,67 @@ $.ajax({
                 <label for="id_weight">Weight (grams) <span class="required">*</span></label>
                 <input type="number" class="form-control" id="id_weight" name="weight" min="1" max="100" required>
             </div>
+
+            <!-- Add these fields after the weight field and before the metaltype field -->
+
+            <div class="form-group">
+                <label for="id_bis_hallmark">BIS Hallmark Number</label>
+                <input type="text" class="form-control" id="id_bis_hallmark" name="bis_hallmark" 
+                       placeholder="Enter BIS hallmark number">
+                <small class="form-text text-muted">Optional: Enter the BIS hallmark certification number</small>
+            </div>
+
+            <div class="form-group">
+                <label for="id_making_charges">Making Charges (₹) <span class="required">*</span></label>
+                <input type="number" class="form-control" id="id_making_charges" name="making_charges" 
+                       min="0" step="0.01" required>
+                <small class="form-text text-muted">Enter the making charges for this product</small>
+            </div>
+
+            <div class="form-group">
+                <label for="id_diamond_weight">Diamond Weight (carats)</label>
+                <input type="number" class="form-control" id="id_diamond_weight" name="diamond_weight" 
+                       min="0" step="0.01" value="0">
+                <small class="form-text text-muted">Enter the diamond weight in carats (if applicable)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="id_diamond_quality">Diamond Quality</label>
+                <select class="form-control" id="id_diamond_quality" name="diamond_quality">
+                    <option value="">Select Diamond Quality</option>
+                    <option value="IJ-SI">IJ-SI</option>
+                    <option value="GH-VS">GH-VS</option>
+                    <option value="GH-SI">GH-SI</option>
+                    <option value="EF-VVS">EF-VVS</option>
+                </select>
+                <small class="form-text text-muted">Select the diamond quality (if applicable)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="id_estimated_delivery">Estimated Delivery (days) <span class="required">*</span></label>
+                <input type="number" class="form-control" id="id_estimated_delivery" name="estimated_delivery" 
+                       min="1" max="30" value="7" required>
+                <small class="form-text text-muted">Enter the estimated delivery time in days</small>
+            </div>
+
+            <!-- Add this before the submit button -->
+            <!-- <div class="form-group">
+                <label>Initial Rating Information</label>
+                <div class="row">
+                    <div class="col-md-6">
+                        <input type="number" class="form-control" id="id_ratings" name="ratings" 
+                               min="0" max="5" step="0.1" value="0" 
+                               placeholder="Initial Rating (0-5)">
+                        <small class="form-text text-muted">Initial product rating (0-5)</small>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="number" class="form-control" id="id_total_ratings" name="total_ratings" 
+                               min="0" value="0" 
+                               placeholder="Total number of ratings">
+                        <small class="form-text text-muted">Initial number of ratings</small>
+                    </div>
+                </div>
+            </div> -->
 
             <div class="form-group">
                 <label for="id_metaltype">Metal Type </label>
@@ -482,8 +627,30 @@ $.ajax({
             </div>
 
             <div class="form-group">
-                <label for="id_image">Product Image <span class="required">*</span></label>
-                <input type="file" class="form-control-file" id="id_image" name="image" required>
+                <label for="id_image">Main Product Image <span class="required">*</span></label>
+                <input type="file" class="form-control-file" id="id_image" name="image" 
+                       accept=".jpg,.jpeg,.png" required 
+                       onchange="validateImageFile(this)">
+                <small class="form-text text-muted">Accepted formats: JPG, JPEG, PNG</small>
+            </div>
+
+            <!-- Additional image fields container -->
+            <div id="additional-images-container">
+                <!-- Additional image fields will be added here dynamically -->
+            </div>
+
+            <!-- Add More Photos button -->
+            <button type="button" class="btn btn-secondary mb-3" id="add-more-photos">
+                <i class="fas fa-plus"></i> Add More Photos
+            </button>
+
+            <!-- Video upload field -->
+            <div class="form-group">
+                <label for="id_product_video">Product Video</label>
+                <input type="file" class="form-control-file" id="id_product_video" 
+                       name="product_video" accept="video/mp4"
+                       onchange="validateVideoFile(this)">
+                <small class="form-text text-muted">Upload MP4 video file only (max size: 50MB)</small>
             </div>
 
             <div class="form-group">
@@ -515,3 +682,177 @@ $.ajax({
     </div>
 </body>
 </html>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let imageCounter = 2; // Start from 2 since image1 is the main image
+        const maxImages = 4; // Maximum number of images allowed (including main image)
+        
+        document.getElementById('add-more-photos').addEventListener('click', function() {
+            if (imageCounter <= maxImages) {
+                const container = document.getElementById('additional-images-container');
+                
+                // Create new image field
+                const newImageField = document.createElement('div');
+                newImageField.className = 'form-group image-group';
+                newImageField.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <label for="id_image${imageCounter}">Additional Image ${imageCounter}</label>
+                            <input type="file" class="form-control-file" 
+                                   id="id_image${imageCounter}" 
+                                   name="image${imageCounter}" 
+                                   accept=".jpg,.jpeg,.png"
+                                   onchange="validateImageFile(this)">
+                            <small class="form-text text-muted">Accepted formats: JPG, JPEG, PNG</small>
+                        </div>
+                        <button type="button" class="btn btn-danger ml-2 remove-image">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                container.appendChild(newImageField);
+                
+                // Add remove button functionality
+                newImageField.querySelector('.remove-image').addEventListener('click', function() {
+                    newImageField.remove();
+                    imageCounter--;
+                    updateAddMoreButton();
+                });
+                
+                imageCounter++;
+                updateAddMoreButton();
+            }
+        });
+        
+        function updateAddMoreButton() {
+            const addButton = document.getElementById('add-more-photos');
+            if (imageCounter > maxImages) {
+                addButton.disabled = true;
+                addButton.innerHTML = '<i class="fas fa-plus"></i> Maximum Images Reached';
+            } else {
+                addButton.disabled = false;
+                addButton.innerHTML = '<i class="fas fa-plus"></i> Add More Photos';
+            }
+        }
+    });
+
+    // Validation functions
+    function validateImageFile(input) {
+        const file = input.files[0];
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        if (file) {
+            if (!allowedTypes.includes(file.type)) {
+                alert('Please upload only JPG, JPEG or PNG files');
+                input.value = '';
+                return false;
+            }
+
+            if (file.size > maxSize) {
+                alert('File size should not exceed 5MB');
+                input.value = '';
+                return false;
+            }
+
+            // Preview image
+            const preview = input.parentElement.querySelector('.image-preview');
+            if (preview) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        return true;
+    }
+
+    function validateVideoFile(input) {
+        const file = input.files[0];
+        const maxSize = 50 * 1024 * 1024; // 50MB
+
+        if (file) {
+            if (file.type !== 'video/mp4') {
+                alert('Please upload only MP4 video files');
+                input.value = '';
+                return false;
+            }
+
+            if (file.size > maxSize) {
+                alert('Video file size should not exceed 50MB');
+                input.value = '';
+                return false;
+            }
+        }
+        return true;
+    }
+</script>
+
+<style>
+    .image-group {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+    }
+
+    .remove-image {
+        padding: 0.25rem 0.5rem;
+        margin-left: 10px;
+    }
+
+    #add-more-photos {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin-bottom: 1rem;
+    }
+
+    #add-more-photos:hover {
+        background-color: #5a6268;
+    }
+
+    #add-more-photos:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+
+    .image-preview {
+        max-width: 200px;
+        max-height: 200px;
+        margin-top: 10px;
+        display: none;
+    }
+</style>
+
+<!-- Add these before closing body tag -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- Add this custom script for manual close functionality -->
+<script>
+    // Function to close alert messages
+    document.addEventListener('DOMContentLoaded', function() {
+        const closeButtons = document.querySelectorAll('.alert .close');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const alert = this.closest('.alert');
+                alert.style.opacity = '0';
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 150);
+            });
+        });
+    });
+</script>

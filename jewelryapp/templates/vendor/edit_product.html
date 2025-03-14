@@ -1,258 +1,722 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Update Product</title>
-    <script type="text/javascript">
-        // Function to disable the back button
-        function preventBack() {
-            history.pushState(null, null, location.href); // Add a new state to the history
-            window.addEventListener('popstate', function (event) {
-                history.pushState(null, null, location.href); // Keep adding a new state to block the back action
-            });
+    <title>Edit Product - Vendor</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'css/vendor_styles.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        /* Copy styles from add_product.html */
+        #wrapper {
+            overflow-x: hidden;
         }
 
-        // Call the function to prevent back navigation
-        window.onload = preventBack;
-    </script>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        /* Add your styles here */
-        body {
-            background-color: #e9ecef;
-            font-family: 'Poppins', sans-serif;
+        #sidebar-wrapper {
+            min-height: 100vh;
+            margin-left: -15rem;
+            transition: margin .25s ease-out;
+            width: 15rem;
         }
-        .container {
-            background-color: #fff;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-            max-width: 700px;
-            margin: 60px auto;
-        }
-        h2 {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .error-message {
-            color: red;
-            font-size: 0.875rem;
-        }
-        
+
         #sidebar-wrapper .sidebar-heading {
-            padding: 1rem;
-            font-size: 1.5rem;
-            background-color: #212529; /* Darker heading for contrast */
-            color: #fff;
-            text-align: center;
+            padding: 0.875rem 1.25rem;
+            font-size: 1.2rem;
+        }
+
+        #sidebar-wrapper .list-group {
+            width: 15rem;
         }
 
         .list-group-item {
             border: none;
-            background-color: transparent;
-            color: #0a0a0a; /* Light text color */
+            padding: 0.75rem 1.25rem;
         }
 
-        .list-group-item:hover, .list-group-item:focus {
-            background-color: #495057; /* Darker hover effect */
-            color: #fff;
+        .list-group-item.active {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .list-group-item:hover {
+            background-color: #f8f9fa;
+            color: #007bff;
         }
 
         #page-content-wrapper {
-            width: 100vw;
-            padding: 20px;
+            min-width: 100vw;
         }
 
-        .navbar {
-            padding-left: 0;
+        .wrapper.toggled #sidebar-wrapper {
+            margin-left: 0;
         }
 
-        .navbar-light {
-            background-color: #e9ecef; /* Light navbar background */
+        @media (min-width: 768px) {
+            #sidebar-wrapper {
+                margin-left: 0;
+            }
+
+            #page-content-wrapper {
+                min-width: 0;
+                width: 100%;
+            }
+
+            .wrapper.toggled #sidebar-wrapper {
+                margin-left: -15rem;
+            }
         }
 
+        .accordion .card {
+            border: none;
+            background: transparent;
+        }
+
+        .accordion .card-header {
+            background: transparent;
+            padding: 0;
+            border: none;
+        }
+
+        .accordion .btn-link {
+            color: #333;
+            text-decoration: none;
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1.25rem;
+        }
+
+        .accordion .btn-link:hover,
+        .accordion .btn-link:focus {
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .accordion .card-body {
+            padding: 0;
+        }
+
+        .accordion .card-body .list-group-item {
+            padding-left: 2rem;
+        }
+
+        .current-image {
+            max-width: 150px;
+            margin-bottom: 10px;
+        }
+
+        .stone-section {
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
-
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="{% url 'vendor_home' %}">Home</a>
-        <div class="collapse navbar-collapse">
-            <ul class="navbar-nav ml-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'logout' %}">Logout</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-
-<!-- Sidebar -->
-<div class="d-flex" id="wrapper">
-    <div class="bg-light border-right" id="sidebar-wrapper">
-        <div class="sidebar-heading">Blue Dart</div>
-        <!-- <div class="list-group list-group-flush"> -->
-    </div>
-</div>      
-
-
-        <div class="container">
-            <h2>Update Product</h2>
-            <form method="POST" action="{% url 'vendor_edit_product' product.id %}" onsubmit="validateForm(event)" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label for="id_product_name">Product Name</label>
-                    <input type="text" class="form-control" id="id_product_name" name="product_name" value="{{ product.product_name }}" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="id_category">Category</label>
-                    <select class="form-control" id="id_category" name="id_category" onchange="loadAttributes()" required>
-                        <option value="">Select a category</option>
-                        {% for category in categories %}
-                            <option value="{{ category.category_id }}" {% if category.id == product.category.catgeory_id %}selected{% endif %}>{{ category.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-    
-                <div id="attributes-container">
-                    <!-- Attributes will be dynamically loaded here based on the category -->
-                </div>
-    
-                <div class="form-group">
-                    <label for="id_price">Price</label>
-                    <input type="text" class="form-control" id="id_price" name="price" value="{{ product.price }}" required>
-                </div>
-    
-                <div class="form-group">
-                    <label for="id_stock_quantity">Stock Quantity</label>
-                    <input type="number" class="form-control" id="id_stock_quantity" name="stock_quantity" value="{{ product.stock_quantity }}" required>
-                </div>
-    
-                <div class="form-group">
-                    <label for="id_weight">Weight</label>
-                    <input type="number" class="form-control" id="id_weight" name="weight" value="{{ product.weight }}" required>
-                </div>
-    
-                <div class="form-group">
-                    <label for="id_product_description">Description</label>
-                    <textarea class="form-control" id="id_product_description" name="product_description" required>{{ product.product_description }}</textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="id_metaltype">Metal Type</label>
-                    <select class="form-control" id="id_metaltype" name="metaltype" required>
-                        <option value="">Select Metal Type</option>
-                        {% for metaltype in metaltypes %}
-                            <option value="{{ metaltype.metaltype_id }}" 
-                                {% if metaltype.metaltype_id == product.metaltype.metaltype_id %}selected{% endif %}>
-                                {{ metaltype.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                
-            <div class="form-group">
-                <label for="id_stonetype">Stone Type </label>
-                <select class="form-control" id="id_stonetype" name="stonetype">
-                    <option value="">Select Stone Type</option>
-                    {% for stonetype in stonetypes %}
-                    <option value="{{ stonetype.stonetype_id }}" 
-                    {% if stonetype.stonetype_id == product.stonetype.stonetype_id %}selected{% endif %}>
-                    {{ stonetype.name }}
-                </option>                   
-                {% endfor %}
-                </select>
-            </div>
-
-
-            <div class="form-group">
-                <label for="id_gender">Gender <span class="required">*</span></label>
-                <select class="form-control" id="id_gender" name="gender" required>
-                    <option value="">Select Gender</option>
-                    <option value="Men" {% if product.gender == "Men" %}selected{% endif %}>Men</option>
-                    <option value="Women" {% if product.gender == "Women" %}selected{% endif %}>Women</option>
-                    <option value="Unisex" {% if product.gender == "Unisex" %}selected{% endif %}>Unisex</option>
-                    <option value="Kid" {% if product.gender == "Kid" %}selected{% endif %}>Kid</option>
-                    <option value="Baby" {% if product.gender == "Baby" %}selected{% endif %}>Baby</option>
-                </select>
-            </div>
-                
-
-
-
-                <div class="form-group">
-                    <label for="id_image">Image</label>
-                    
-                    <!-- Display the current image if it exists -->
-                    {% if product.images %}
-                        <div>
-                            <img src="{{ product.images.url }}" alt="Current Image" style="max-width: 150px; max-height: 150px;">
+    <div class="d-flex" id="wrapper">
+        <!-- Sidebar -->
+        <div class="bg-light border-right" id="sidebar-wrapper">
+            <div class="sidebar-heading">Vendor Dashboard</div>
+            <div class="list-group list-group-flush">
+                <!-- Dashboard Link -->
+                <a href="{% url 'vendor_home' %}" class="list-group-item">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <div class="accordion" id="sidebarAccordion">
+                    <!-- Product Management -->
+                    <div class="card">
+                        <div class="card-header" id="productManagement">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseProducts" aria-expanded="true">
+                                    <i class="fas fa-box"></i> Product Management
+                                </button>
+                            </h2>
                         </div>
-                    {% endif %}
-                    
-                    <!-- File input field to upload a new image -->
-                    <input type="file" class="form-control" id="id_image" name="image">
-                </div>
-                
-                
-    
-                <button type="submit">Update Product</button>
-    
-                <div id="error-messages"></div>
-            </form>
-        </div>
-    
-        <script>
-            function loadAttributes() {
-                const categoryId = document.getElementById('id_category').value;
-                if (!categoryId) {
-                    $('#attributes-container').html('<p style="color:red;">Please select a category to load its attributes.</p>');
-                    return;
-                }
-    
-                $.ajax({
-                    url: `/get_category_attributes/${categoryId}/`,
-                    type: 'GET',
-                    dataType: 'json',
-                    success: function (response) {
-                        displayAttributes(response);
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Error fetching category attributes:', error);
-                        $('#attributes-container').html('<p style="color:red;">Error fetching attributes. Please try again.</p>');
-                    }
-                });
-            }
-    
-            function displayAttributes(data) {
-                const attributesContainer = $('#attributes-container');
-                attributesContainer.empty();
-    
-                if (data && data.attributes && data.attributes.length > 0) {
-                    let attributesHtml = '';
-                    data.attributes.forEach(function (attribute) {
-                        attributesHtml += `
-                            <div class="form-group">
-                                <label>${attribute.name}</label>
-                                <input type="text" class="form-control" name="attribute_${attribute.id}" value="${attribute.value || ''}" />
-                                <input type="hidden" name="attributes" value="${attribute.id}" />
+                        <div id="collapseProducts" class="collapse show" data-parent="#sidebarAccordion">
+                            <div class="card-body">
+                                <a href="{% url 'vendor_add_product' %}" class="list-group-item">
+                                    <i class="fas fa-plus"></i> Add Product
+                                </a>
+                                <a href="{% url 'vendor_products' %}" class="list-group-item active">
+                                    <i class="fas fa-list"></i> View Products
+                                </a>
                             </div>
-                        `;
-                    });
-                    attributesContainer.html(attributesHtml);
-                } else {
-                    attributesContainer.html('<p>No attributes found for this category.</p>');
-                }
-            }
-    
-            $(document).ready(function () {
-                // Load attributes for the initial product category on page load
-                loadAttributes();
-            });
-        </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Page Content -->
+        <div id="page-content-wrapper">
+            <div class="container-fluid">
+                <h2 class="mt-4 mb-4">Edit Product</h2>
+
+                {% if messages %}
+                <div class="messages mb-4">
+                    {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="POST" enctype="multipart/form-data" id="productForm">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Product Details -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Basic Product Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Product Name <span class="required">*</span></label>
+                                <input type="text" class="form-control" name="product_name" value="{{ product.product_name }}" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Category <span class="required">*</span></label>
+                                <select class="form-control" name="category" id="category" required>
+                                    <option value="">Select Category</option>
+                                    {% for category in categories %}
+                                        <option value="{{ category.category_id }}" {% if category.category_id == product.category.category_id %}selected{% endif %}>
+                                            {{ category.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Description <span class="required">*</span></label>
+                                <textarea class="form-control" name="description" rows="3" required>{{ product.product_description }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metal Details -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Metal Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Metal Type <span class="required">*</span></label>
+                                <select class="form-control" name="metaltype" id="metaltype" required
+                                        data-initial-metal-type="{{ product.metal_details.metal_type.metaltype_id|default:'' }}">
+                                    <option value="">Select Metal Type</option>
+                                    {% for metal in metaltypes %}
+                                        <option value="{{ metal.metaltype_id }}" 
+                                                {% if product.metal_details and metal.metaltype_id == product.metal_details.metal_type.metaltype_id %}selected{% endif %}>
+                                            {{ metal.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Metal Weight (grams) <span class="required">*</span></label>
+                                <input type="number" class="form-control" name="weight" id="metal_weight" 
+                                       step="0.01" min="0" value="{{ product.metal_details.weight|default:'' }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Metal Purity (KT) <span class="required">*</span></label>
+                                <select class="form-control" name="purity" id="metal_purity" required
+                                        data-initial-purity="{{ product.metal_details.purity.purity_value|default:'' }}"
+                                        data-initial-rate="{{ product.metal_details.rate_per_gram|default:'' }}">
+                                    <option value="">Select Metal Type First</option>
+                                    {% if product.metal_details %}
+                                        <option value="{{ product.metal_details.purity.purity_value }}" 
+                                                data-rate="{{ product.metal_details.rate_per_gram }}" selected>
+                                            {{ product.metal_details.purity.purity_value }}
+                                        </option>
+                                    {% endif %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Current Metal Rate (per gram)</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text">₹</span>
+                                    </div>
+                                    <input type="text" class="form-control" id="current_rate" 
+                                           value="{{ product.metal_details.rate_per_gram|default:'' }}" readonly>
+                                    <div class="input-group-append">
+                                        <span class="input-group-text">/gram</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Metal Cost</label>
+                                <input type="text" class="form-control" id="metal_cost_display" 
+                                       value="{{ product.metal_details.total_cost|default:'' }}" readonly>
+                                <input type="hidden" name="metal_cost" id="metal_cost" 
+                                       value="{{ product.metal_details.total_cost|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stone Details -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Stone Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div id="stone-sections">
+                                {% for stone in product.stones.all %}
+                                <div class="stone-section mb-4">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5>Stone {{ forloop.counter }}</h5>
+                                        {% if not forloop.first %}
+                                        <button type="button" class="btn btn-danger btn-sm remove-stone">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Stone Type</label>
+                                        <select class="form-control stonetype" name="stonetype[]">
+                                            <option value="">Select Stone Type</option>
+                                            {% for stone_type in stonetypes %}
+                                                <option value="{{ stone_type.stonetype_id }}" 
+                                                        data-stone-type="{{ stone_type.name|lower }}"
+                                                        {% if stone_type.stonetype_id == stone.stone_type.stonetype_id %}selected{% endif %}>
+                                                    {{ stone_type.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div class="stone-details-fields">
+                                        <div class="form-group">
+                                            <label>Stone Weight (carats)</label>
+                                            <input type="number" class="form-control" name="stone_weight[]" 
+                                                   step="0.001" min="0" value="{{ stone.weight }}">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Number of Stones</label>
+                                            <input type="number" class="form-control" name="stone_count[]" 
+                                                   min="1" value="{{ stone.count }}">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Stone Quality</label>
+                                            <select class="form-control" name="stone_quality[]">
+                                                <option value="{{ stone.quality }}" selected>{{ stone.quality }}</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Rate per Carat</label>
+                                            <input type="text" class="form-control" name="stone_rate[]" 
+                                                   value="{{ stone.rate_per_carat }}" readonly>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Stone Cost</label>
+                                        <input type="text" class="form-control stone-cost" value="{{ stone.total_cost }}" readonly>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Add Stone Button -->
+                            <button type="button" class="btn btn-secondary mb-3" id="add-stone-btn">
+                                <i class="fas fa-plus"></i> Add Another Stone
+                            </button>
+
+                            <!-- Total Stone Cost -->
+                            <div class="form-group">
+                                <label>Total Stone Cost</label>
+                                <input type="text" class="form-control" id="total_stone_cost_display" 
+                                       value="{{ product.pricing_details.stone_cost|default:'' }}" readonly>
+                                <input type="hidden" name="total_stone_cost" id="total_stone_cost" 
+                                       value="{{ product.pricing_details.stone_cost|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Price Calculation -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Price Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Making Charges (%) <span class="required">*</span></label>
+                                <input type="number" class="form-control" name="making_charges_percentage" 
+                                       id="making_charges_percentage" min="0" max="100" 
+                                       value="{{ product.pricing_details.making_charges_percentage|default:'' }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Making Charges Amount</label>
+                                <input type="text" class="form-control" id="making_charges_display" 
+                                       value="{{ product.pricing_details.making_charges|default:'' }}" readonly>
+                                <input type="hidden" name="making_charges" id="making_charges" 
+                                       value="{{ product.pricing_details.making_charges|default:'' }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Total Price</label>
+                                <input type="text" class="form-control" id="total_price_display" 
+                                       value="{{ product.pricing_details.total_price|default:'' }}" readonly>
+                                <input type="hidden" name="total_price" id="total_price" 
+                                       value="{{ product.pricing_details.total_price|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Images and Video -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Product Images & Video</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Main Image</label>
+                                {% if product.images.main_image %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <img src="{{ product.images.main_image.url }}" class="current-image mr-2" alt="Current main image">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeImage('main_image')">
+                                            <i class="fas fa-trash"></i> Remove
+                                        </button>
+                                        <input type="hidden" name="remove_main_image" id="remove_main_image" value="false">
+                                    </div>
+                                {% endif %}
+                                <input type="file" class="form-control-file" name="main_image" accept="image/*">
+                                <small class="form-text text-muted">Leave empty to keep current image</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Image 1</label>
+                                {% if product.images.image2 %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <img src="{{ product.images.image2.url }}" class="current-image mr-2" alt="Current image 2">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeImage('image2')">
+                                            <i class="fas fa-trash"></i> Remove
+                                        </button>
+                                        <input type="hidden" name="remove_image2" id="remove_image2" value="false">
+                                    </div>
+                                {% endif %}
+                                <input type="file" class="form-control-file" name="image2" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Image 2</label>
+                                {% if product.images.image3 %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <img src="{{ product.images.image3.url }}" class="current-image mr-2" alt="Current image 3">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeImage('image3')">
+                                            <i class="fas fa-trash"></i> Remove
+                                        </button>
+                                        <input type="hidden" name="remove_image3" id="remove_image3" value="false">
+                                    </div>
+                                {% endif %}
+                                <input type="file" class="form-control-file" name="image3" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Image 3</label>
+                                {% if product.images.image4 %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <img src="{{ product.images.image4.url }}" class="current-image mr-2" alt="Current image 4">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeImage('image4')">
+                                            <i class="fas fa-trash"></i> Remove
+                                        </button>
+                                        <input type="hidden" name="remove_image4" id="remove_image4" value="false">
+                                    </div>
+                                {% endif %}
+                                <input type="file" class="form-control-file" name="image4" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Product Video</label>
+                                {% if product.images.product_video %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <video width="320" height="240" controls class="mr-2">
+                                            <source src="{{ product.images.product_video.url }}" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeImage('product_video')">
+                                            <i class="fas fa-trash"></i> Remove
+                                        </button>
+                                        <input type="hidden" name="remove_product_video" id="remove_product_video" value="false">
+                                    </div>
+                                {% endif %}
+                                <input type="file" class="form-control-file" name="product_video" accept="video/*">
+                            </div>
+
+                            <script>
+                                function removeImage(imageType) {
+                                    // Set the hidden input value to true
+                                    document.getElementById('remove_' + imageType).value = 'true';
+                                    
+                                    // Find and hide the image/video container (the parent div with class d-flex)
+                                    const container = document.getElementById('remove_' + imageType).closest('.d-flex');
+                                    if (container) {
+                                        container.style.display = 'none';
+                                    }
+                                }
+                            </script>
+                        </div>
+                    </div>
+
+                    <!-- Additional Details -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Additional Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Stock Quantity <span class="required">*</span></label>
+                                <input type="number" class="form-control" name="stock_quantity" 
+                                       min="0" value="{{ product.additional_details.stock_quantity|default:'' }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>BIS Hallmark Number</label>
+                                <input type="text" class="form-control" name="bis_hallmark" 
+                                       value="{{ product.additional_details.bis_hallmark|default:'' }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Estimated Delivery (days) <span class="required">*</span></label>
+                                <input type="number" class="form-control" name="estimated_delivery" 
+                                       min="1" max="30" value="{{ product.additional_details.estimated_delivery|default:'7' }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Gender <span class="required">*</span></label>
+                                <select class="form-control" name="gender" required>
+                                    <option value="">Select Gender</option>
+                                    <option value="Men" {% if product.additional_details.gender == 'Men' %}selected{% endif %}>Men</option>
+                                    <option value="Women" {% if product.additional_details.gender == 'Women' %}selected{% endif %}>Women</option>
+                                    <option value="Unisex" {% if product.additional_details.gender == 'Unisex' %}selected{% endif %}>Unisex</option>
+                                    <option value="Kids" {% if product.additional_details.gender == 'Kids' %}selected{% endif %}>Kids</option>
+                                    <option value="Baby" {% if product.additional_details.gender == 'Baby' %}selected{% endif %}>Baby</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Delivery Options</label><br>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="home_delivery" 
+                                           {% if product.additional_details.home_delivery %}checked{% endif %}>
+                                    <label class="form-check-label">Home Delivery</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="store_pickup" 
+                                           {% if product.additional_details.store_pickup %}checked{% endif %}>
+                                    <label class="form-check-label">Store Pickup</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="try_at_home" 
+                                           {% if product.additional_details.try_at_home %}checked{% endif %}>
+                                    <label class="form-check-label">Try at Home</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Buttons -->
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <a href="{% url 'vendor_products' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize metal type change handler
+            $('#metaltype').change(function() {
+                const selectedMetalType = $(this).val();
+                const puritySelect = $('#metal_purity');
+                
+                // Store current purity and rate before clearing options
+                const currentPurity = puritySelect.val();
+                const currentRate = puritySelect.find('option:selected').data('rate');
+                
+                puritySelect.empty().append('<option value="">Select Purity</option>');
+                
+                if (selectedMetalType in metal_data) {
+                    const purities = metal_data[selectedMetalType];
+                    purities.forEach(function(purity) {
+                        const selected = purity.purity === currentPurity ? 'selected' : '';
+                        puritySelect.append(`<option value="${purity.purity}" data-rate="${purity.rate}" ${selected}>${purity.purity}${selectedMetalType === 'gold' ? 'K' : ''}</option>`);
+                    });
+                    
+                    puritySelect.prop('disabled', false);
+                    updateMetalCost();
+                } else {
+                    puritySelect.prop('disabled', true);
+                }
+            });
+
+            // Handle purity change
+            $('#metal_purity').change(function() {
+                updateMetalCost();
+            });
+
+            // Function to update metal cost
+            function updateMetalCost() {
+                const weight = parseFloat($('#metal_weight').val()) || 0;
+                const selectedOption = $('#metal_purity option:selected');
+                const rate = parseFloat(selectedOption.data('rate')) || 0;
+                const purityValue = selectedOption.val();
+                
+                let purityPercentage = 0;
+                if (purityValue) {
+                    const metalType = $('#metaltype').val();
+                    if (metalType === 'gold') {
+                        purityPercentage = parseFloat(purityValue) * (100/24);
+                    } else {
+                        purityPercentage = parseFloat(purityValue) / 10;
+                    }
+                }
+                
+                const metalCost = weight * rate * (purityPercentage / 100);
+                
+                $('#current_rate').val(rate.toFixed(2));
+                $('#metal_cost').val(metalCost.toFixed(2));
+                $('#metal_cost_display').val(metalCost.toFixed(2));
+                updateTotalPrice();
+            }
+
+            // Initialize metal type and purity on page load
+            const savedMetalType = $('#metaltype').data('initial-metal-type');
+            const savedPurity = $('#metal_purity').data('initial-purity');
+            const savedRate = $('#current_rate').data('initial-rate');
+            
+            if (savedMetalType) {
+                $('#metaltype').val(savedMetalType).trigger('change');
+                if (savedPurity) {
+                    $('#metal_purity').val(savedPurity);
+                }
+                updateMetalCost();
+            }
+
+            // Initialize stone type change handler
+            $(document).on('change', '.stonetype', function() {
+                const stoneSection = $(this).closest('.stone-section');
+                const detailsFields = stoneSection.find('.stone-details-fields');
+                const selectedStoneType = $(this).find('option:selected').data('stone-type');
+                
+                if (selectedStoneType && selectedStoneType in {{ stone_data|safe }}) {
+                    const stoneConfig = {{ stone_data|safe }}[selectedStoneType];
+                    detailsFields.show();
+                    
+                    // Update quality options
+                    const qualitySelect = detailsFields.find('select[name="stone_quality[]"]');
+                    qualitySelect.empty();
+                    stoneConfig.forEach(function(quality) {
+                        qualitySelect.append(`<option value="${quality.grade}">${quality.clarity}</option>`);
+                    });
+                } else {
+                    detailsFields.hide();
+                }
+            });
+
+            // Add stone button handler
+            $('#add-stone-btn').click(function() {
+                const stoneCount = $('.stone-section').length + 1;
+                const newStoneSection = `
+                    <div class="stone-section mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5>Stone ${stoneCount}</h5>
+                            <button type="button" class="btn btn-danger btn-sm remove-stone">
+                                <i class="fas fa-times"></i> Remove
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label>Stone Type</label>
+                            <select class="form-control stonetype" name="stonetype[]">
+                                <option value="">Select Stone Type</option>
+                                {% for stone in stonetypes %}
+                                    <option value="{{ stone.stonetype_id }}" 
+                                            data-stone-type="{{ stone.name|lower }}">
+                                        {{ stone.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="stone-details-fields" style="display: none;">
+                            <div class="form-group">
+                                <label>Stone Weight (carats)</label>
+                                <input type="number" class="form-control" name="stone_weight[]" 
+                                       step="0.001" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Number of Stones</label>
+                                <input type="number" class="form-control" name="stone_count[]" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Stone Quality</label>
+                                <select class="form-control" name="stone_quality[]">
+                                    <option value="">Select Quality</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Rate per Carat</label>
+                                <input type="text" class="form-control" name="stone_rate[]" readonly>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Stone Cost</label>
+                            <input type="text" class="form-control stone-cost" readonly>
+                        </div>
+                    </div>
+                `;
+                $('#stone-sections').append(newStoneSection);
+            });
+
+            // Remove stone button handler
+            $(document).on('click', '.remove-stone', function() {
+                $(this).closest('.stone-section').remove();
+                updateTotalStoneCost();
+            });
+
+            // Initialize existing stone type fields
+            $('.stonetype').each(function() {
+                $(this).trigger('change');
+            });
+
+            // Function to update total stone cost
+            function updateTotalStoneCost() {
+                let totalStoneCost = 0;
+                $('.stone-cost').each(function() {
+                    const cost = parseFloat($(this).val()) || 0;
+                    totalStoneCost += cost;
+                });
+                $('#total_stone_cost_display').val(totalStoneCost.toFixed(2));
+                $('#total_stone_cost').val(totalStoneCost.toFixed(2));
+                updateTotalPrice();
+            }
+
+            // Function to update total price
+            function updateTotalPrice() {
+                const metalCost = parseFloat($('#metal_cost').val()) || 0;
+                const stoneCost = parseFloat($('#total_stone_cost').val()) || 0;
+                const makingChargesPercentage = parseFloat($('#making_charges_percentage').val()) || 0;
+                
+                const makingCharges = (metalCost * makingChargesPercentage) / 100;
+                const totalPrice = metalCost + stoneCost + makingCharges;
+                
+                $('#making_charges_display').val(makingCharges.toFixed(2));
+                $('#making_charges').val(makingCharges.toFixed(2));
+                $('#total_price_display').val(totalPrice.toFixed(2));
+                $('#total_price').val(totalPrice.toFixed(2));
+            }
+
+            // Add event listeners for price updates
+            $('#metal_cost, #total_stone_cost, #making_charges_percentage').on('input', updateTotalPrice);
+        });
+    </script>
 </body>
-</html>
+</html> 

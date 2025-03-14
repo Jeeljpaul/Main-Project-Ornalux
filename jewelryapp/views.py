@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import *
 from django.core.validators import validate_email
@@ -9,7 +9,7 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import random
 import string
 from django.conf import settings
@@ -18,10 +18,7 @@ import os
 from django.views.decorators.http import require_POST
 import json
 from django.contrib.auth import authenticate, login
-from django.http import JsonResponse
-from .models import VendorPayment, PaymentRequest
-from .models import VendorProduct
-from .models import Wishlist, WishlistItem
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from .ml.image_search import JewelryImageSearch
 from PIL import Image
@@ -36,6 +33,83 @@ import cv2
 import google.generativeai as genai
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from jewelryapp.ai_models.utils import predict_ring_size
+import base64
+import time
+import requests  # Add this import
+from .utils import get_current_metal_rate  # Add this import
+from django.contrib import messages
+from .models import Review
+from django.shortcuts import get_object_or_404, redirect
+from django.db.models import Avg
+from .utils.price_calculator import PriceCalculator
+from .utils import PriceCalculator
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .models import Category, Metaltype, Stonetype
+from django.core.files.storage import FileSystemStorage
+from django.db import transaction
+from .utils import get_current_metal_rate, get_diamond_rate, get_gemstone_rate, calculate_diamond_price
+from decimal import Decimal
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse, HttpResponse
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import csrf_exempt
+from django.core.files.storage import FileSystemStorage
+from django.core.mail import send_mail
+from django.conf import settings
+from django.db.models import Q, Sum, Count
+from django.middleware.cache import CacheMiddleware
+from django.utils.decorators import decorator_from_middleware
+from django.views.decorators.http import require_POST
+from django.core.cache import cache
+from decimal import Decimal
+import json
+import os
+import uuid
+import base64
+import re
+import datetime
+import random
+import string
+from PIL import Image
+import io
+import numpy as np
+import cv2
+import tensorflow as tf
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras.preprocessing.image import img_to_array
+from .models import *
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.db.models import Prefetch
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from .models import (
+    Vendor, VendorProduct, Category, VendorProductMetal, VendorProductStone,
+    VendorProductPricing, VendorProductImage, VendorProductAttribute, VendorAdditionalDetails
+)
+from .utils.perfect_corp import PerfectCorpSDK
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .utils.background_remover import BackgroundRemover
+import json
+import os
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.cache import cache_control
+import razorpay
+from django.conf import settings
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.cache import cache_control
+import json
+
+# Initialize Razorpay client
+razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 def index(request):
     return render(request, 'index.html', {'user': request.user})
@@ -141,12 +215,23 @@ from .models import Tbl_login, Tbl_user, Tbl_staff, Vendor
 
 def login(request):
     if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-
+        email = request.POST['email']
+        password = request.POST['password']
+        
         try:
             login_obj = Tbl_login.objects.get(email=email, password=password)
-
+            
+            # Check if this login belongs to a vendor
+            vendor = Vendor.objects.filter(login=login_obj).first()
+            if vendor:
+                request.session['user_type'] = 'vendor'
+                request.session['login_id'] = login_obj.login_id
+                request.session['vendor_id'] = vendor.vendor_id
+                request.session['email'] = login_obj.email
+                request.session['name'] = vendor.business_name
+                request.session.save()  # Save session
+                return redirect('vendor_home')  # Make sure this URL exists
+            
             # Check for admin
             if email == 'admin123@gmail.com':
                 request.session['user_type'] = 'admin'
@@ -154,23 +239,6 @@ def login(request):
                 request.session['email'] = login_obj.email
                 request.session.save()  # Save session
                 return redirect('/adminhome/')  # Make sure this matches your URL pattern
-
-            # Check for vendor
-            try:
-                vendor = Vendor.objects.get(login=login_obj)
-                if vendor.status:
-                    request.session['user_type'] = 'vendor'
-                    request.session['login_id'] = login_obj.login_id
-                    request.session['vendor_id'] = vendor.vendor_id
-                    request.session['email'] = login_obj.email
-                    request.session['name'] = vendor.business_name
-                    request.session.save()  # Save session
-                    return redirect('vendor_home')  # Ensure this matches the URL name
-                else:
-                    messages.error(request, 'Your vendor account is inactive')
-                    return redirect('login')
-            except Vendor.DoesNotExist:
-                pass  # Not a vendor, continue to check other roles
 
             # Check for staff
             try:
@@ -282,21 +350,27 @@ from django.contrib import messages
 
 @decorator_from_middleware(CacheMiddleware)
 def adminhome(request):
-    # Check if user is logged in and is admin
-    if 'user_type' not in request.session or request.session['user_type'] != 'admin':
-        messages.error(request, 'You need to log in as an admin to access this page.')
+    """Admin dashboard view"""
+    if 'login_id' not in request.session or request.session.get('user_type') != 'admin':
         return redirect('login')
-
-    # Get any pending payment requests
-    payment_requests = PaymentRequest.objects.filter(status='Pending')
-
-    print(f"Pending payment requests: {payment_requests.count()}")
-
-    context = {
-        'payment_requests': payment_requests,
-    }
-
-    return render(request, 'admin/adminhome.html', context)
+    
+    try:
+        # Get pending payment requests
+        payment_requests = VendorPayment.objects.filter(status='pending')
+        
+        # Get pending date change requests
+        date_change_requests = DateChangeRequest.objects.filter(status='pending')
+        
+        context = {
+            'payment_requests': payment_requests,
+            'date_change_requests': date_change_requests,
+        }
+        
+        return render(request, 'admin/adminhome.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('login')
 
 
 
@@ -1377,57 +1451,109 @@ from .models import ProductAttribute
 
 def add_pro(request):
     if request.method == 'POST':
-        product_name = request.POST.get('product_name')
-        category_id = request.POST.get('id_category')
-        product_description = request.POST.get('product_description')
-        price = request.POST.get('price')
-        stock_quantity = request.POST.get('stock_quantity')
-        weight = request.POST.get('weight')
-        metaltype_id = request.POST.get('metaltype', None)
-        stonetype_id = request.POST.get('stonetype', None)
-        gender = request.POST.get('gender', 'Unisex')
-        image = request.FILES.get('image')
-        vendor_id = request.POST.get('vendor')  # Get the selected vendor ID
-
-        # Handling delivery options (checkboxes)
-        delivery_options = request.POST.getlist('delivery_options[]')
-        home_delivery = 'Home Delivery' in delivery_options
-        store_pickup = 'Store Pickup' in delivery_options
-        try_at_home = 'Try at home' in delivery_options
-        
-        # Handling bestselling checkbox
-        bestseller = request.POST.get('bestseller', 'off') == 'Yes'  # Checkbox for bestselling item
-
-        # Validate the inputs
         try:
-            price = float(price)
-            stock_quantity = int(stock_quantity)
-            weight = float(weight)
-        except ValueError:
-            messages.error(request, "Invalid input values.")
-            return redirect('add_pro')
+            # Get form data
+            product_name = request.POST.get('product_name')
+            category_id = request.POST.get('id_category')
+            weight = float(request.POST.get('weight', 0))
+            
+            # Check for duplicate product - case insensitive name comparison
+            existing_products = Product.objects.filter(
+                product_name__iexact=product_name,
+                category_id=category_id
+            )
 
-        if not (100 <= price <= 10000000):
-            messages.error(request, "Price must be between 100 and 10,000,000.")
-            return redirect('add_pro')
+            # Check each existing product's weight
+            for existing_product in existing_products:
+                # Compare weights with small tolerance for float comparison
+                if abs(float(existing_product.weight) - weight) < 0.01:
+                    # Get category name for better error message
+                    category_name = Category.objects.get(category_id=category_id).name
+                    messages.error(
+                        request, 
+                        f"""
+                        Duplicate Product Error:
+                        - Product Name: {product_name}
+                        - Category: {category_name}
+                        - Weight: {weight}g
+                        
+                        A product with these specifications already exists in the database. 
+                        Please modify the product name or weight to add a new product.
+                        """
+                    )
+                    # Return to form with entered values preserved
+                    context = {
+                        'categories': Category.objects.all(),
+                        'metaltypes': Metaltype.objects.all(),
+                        'stonetypes': Stonetype.objects.all(),
+                        'vendors': Vendor.objects.all(),
+                        'form_data': request.POST,  # Preserve form data
+                    }
+                    return render(request, 'admin/add_p.html', context)
 
-        if not (0 <= stock_quantity <= 50):
-            messages.error(request, "Stock quantity must be between 0 and 50.")
-            return redirect('add_pro')
+            # If we get here, no duplicate exists
+            product_description = request.POST.get('product_description')
+            price = request.POST.get('price')
+            stock_quantity = request.POST.get('stock_quantity')
+            metaltype_id = request.POST.get('metaltype')
+            stonetype_id = request.POST.get('stonetype')
+            gender = request.POST.get('gender', 'Unisex')
+            vendor_id = request.POST.get('vendor')
 
-        if not (1 <= weight <= 100):
-            messages.error(request, "Weight must be between 1 and 100 grams.")
-            return redirect('add_pro')
+            # Add these lines to get the new field values
+            bis_hallmark = request.POST.get('bis_hallmark')
+            making_charges = float(request.POST.get('making_charges', 0))
+            diamond_weight = float(request.POST.get('diamond_weight', 0))
+            diamond_quality = request.POST.get('diamond_quality')
+            estimated_delivery = int(request.POST.get('estimated_delivery', 7))
+            # ratings = float(request.POST.get('ratings', 0))
+            total_ratings = int(request.POST.get('total_ratings', 0))
 
-        # Check if a product with the same name and weight already exists
-        if Product.objects.filter(product_name=product_name, weight=weight).exists():
-            messages.error(request, "A product with this name and weight already exists.")
-            return redirect('add_pro')
+            # Rest of your existing validation code...
+            try:
+                price = float(price)
+                stock_quantity = int(stock_quantity)
+            except ValueError:
+                messages.error(request, "Invalid input values.")
+                return redirect('add_pro')
 
-        # Create the product instance and save it
-        try:
-            vendor = Vendor.objects.get(vendor_id=vendor_id)  # Fetch the vendor
-            product = Product(
+            # Validate numeric ranges
+            if not (100 <= price <= 10000000):
+                messages.error(request, "Price must be between 100 and 10,000,000.")
+                return redirect('add_pro')
+
+            if not (0 <= stock_quantity <= 50):
+                messages.error(request, "Stock quantity must be between 0 and 50.")
+                return redirect('add_pro')
+
+            if not (1 <= weight <= 100):
+                messages.error(request, "Weight must be between 1 and 100 grams.")
+                return redirect('add_pro')
+
+            # Get file uploads
+            main_image = request.FILES.get('image')
+            image2 = request.FILES.get('image2')
+            image3 = request.FILES.get('image3')
+            image4 = request.FILES.get('image4')
+            product_video = request.FILES.get('product_video')
+
+            # Get delivery options
+            delivery_options = request.POST.getlist('delivery_options[]')
+            home_delivery = 'Home Delivery' in delivery_options
+            store_pickup = 'Store Pickup' in delivery_options
+            try_at_home = 'Try at home' in delivery_options
+
+            # Get bestselling status
+            bestseller = request.POST.get('bestselling') == 'Yes'
+
+            # Get related model instances
+            category = Category.objects.get(category_id=category_id) if category_id else None
+            metaltype = Metaltype.objects.get(metaltype_id=metaltype_id) if metaltype_id else None
+            stonetype = Stonetype.objects.get(stonetype_id=stonetype_id) if stonetype_id else None
+            vendor = Vendor.objects.get(vendor_id=vendor_id) if vendor_id else None
+
+            # Create the product
+            product = Product.objects.create(
                 product_name=product_name,
                 category=category,
                 product_description=product_description,
@@ -1435,147 +1561,26 @@ def add_pro(request):
                 stock_quantity=stock_quantity,
                 weight=weight,
                 gender=gender,
-                images=image,
+                images=main_image,
+                image2=image2,
+                image3=image3,
+                image4=image4,
+                product_video=product_video,
                 metaltype=metaltype,
                 stonetype=stonetype,
                 home_delivery=home_delivery,
                 store_pickup=store_pickup,
                 try_at_home=try_at_home,
                 bestselling=bestseller,
-                vendor=vendor  # Set the vendor for the product
+                vendor=vendor,
+                bis_hallmark=bis_hallmark,
+                making_charges=making_charges,
+                diamond_weight=diamond_weight,
+                diamond_quality=diamond_quality,
+                estimated_delivery=estimated_delivery,
+                # ratings=ratings,
+                total_ratings=total_ratings,
             )
-            product.save()
-            messages.success(request, "Product added successfully!")
-
-            # Now handle product attributes
-            attributes_data = request.POST.getlist('attributes')
-            for attribute_id in attributes_data:
-                if attribute_id:  # Only proceed if the ID is not empty
-                    try:
-                        # Debug print statement to check the attribute ID being processed
-                        print(f"Processing attribute ID: {attribute_id}")
-
-                        # Fetch the attribute name from CategoryAttribute using the attribute_id
-                        category_attribute = CategoryAttribute.objects.get(id=attribute_id)
-                        attribute_name = category_attribute.name
-
-                        # Fetch the attribute value from the form using the attribute ID
-                        attribute_value = request.POST.get(f'attribute_{attribute_id}', '')
-                        print(f"Processing attribute {attribute_name} with value: {attribute_value}")
-
-                        # Check if attribute value is provided
-                        if attribute_value:
-                            # Create a ProductAttribute object with the product, attribute name, and value
-                            ProductAttribute.objects.create(
-                                product=product,
-                                attribute_name=attribute_name,
-                                attribute_value=attribute_value
-                            )
-                        else:
-                            messages.warning(request, f"Attribute value for {attribute_name} is missing. Skipping.")
-                    except CategoryAttribute.DoesNotExist:
-                        messages.error(request, f"Attribute with ID {attribute_id} does not exist.")
-                    except Exception as e:
-                        messages.error(request, f"Error saving attribute: {str(e)}")
-
-            return redirect('add_pro')  # Redirect after success
-
-        except (Metaltype.DoesNotExist, Stonetype.DoesNotExist) as e:
-            messages.error(request, f"Error: {str(e)}")
-            return redirect('add_pro')
-
-    # GET request to render the page
-    categories = Category.objects.all()
-    metaltypes = Metaltype.objects.all()
-    stonetypes = Stonetype.objects.all()
-    vendors = Vendor.objects.all()  # Fetch all vendors
-
-    context = {
-        'categories': categories,
-        'metaltypes': metaltypes,
-        'stonetypes': stonetypes,
-        'vendors': vendors,  # Pass the list of vendors to the template
-
-    }
-    return render(request, 'admin/add_p.html', context)
-
-
-def update_pro(request, product_id):
-    product = get_object_or_404(Product, product_id=product_id)
-    vendors = Vendor.objects.all()  # Fetch all vendors
-
-    if request.method == 'POST':
-        product_name = request.POST.get('product_name')
-        category_id = request.POST.get('id_category')
-        product_description = request.POST.get('product_description')
-        price = request.POST.get('price')
-        stock_quantity = request.POST.get('stock_quantity')
-        weight = request.POST.get('weight')
-        metaltype_id = request.POST.get('metaltype', None)
-        stonetype_id = request.POST.get('stonetype', None)
-        gender = request.POST.get('gender', 'Unisex')
-        image = request.FILES.get('image', product.images)  # Keep existing image if not changed
-        vendor_id = request.POST.get('vendor')  # Get the selected vendor ID
-
-
-
-        # Handling delivery options (checkboxes)
-        delivery_options = request.POST.getlist('delivery_options[]')
-        home_delivery = 'Home Delivery' in delivery_options
-        store_pickup = 'Store Pickup' in delivery_options
-        try_at_home = 'Try at home' in delivery_options
-
-        # Handling bestselling checkbox
-        bestseller = request.POST.get('bestseller', 'off') == 'Yes'
-
-        # Validate the inputs
-        try:
-            price = float(price)
-            stock_quantity = int(stock_quantity)
-            weight = float(weight)
-        except ValueError:
-            messages.error(request, "Invalid input values.")
-            return redirect('update_pro', product_id=product.product_id)
-
-        if not (100 <= price <= 10000000):
-            messages.error(request, "Price must be between 100 and 10,000,000.")
-            return redirect('update_pro', product_id=product.product_id)
-
-        if not (0 <= stock_quantity <= 50):
-            messages.error(request, "Stock quantity must be between 0 and 50.")
-            return redirect('update_pro', product_id=product.product_id)
-
-        if not (1 <= weight <= 100):
-            messages.error(request, "Weight must be between 1 and 100 grams.")
-            return redirect('update_pro', product_id=product.product_id)
-
-        try:
-            category = Category.objects.get(category_id=category_id)
-            metaltype = Metaltype.objects.get(metaltype_id=metaltype_id) if metaltype_id else None
-            stonetype = Stonetype.objects.get(stonetype_id=stonetype_id) if stonetype_id else None
-            # Fetch the vendor instance
-            vendor = Vendor.objects.get(vendor_id=vendor_id)  # Ensure this line is present
-
-            # Update the product instance with new details
-            product.product_name = product_name
-            product.category = category
-            product.product_description = product_description
-            product.price = price
-            product.stock_quantity = stock_quantity
-            product.weight = weight
-            product.gender = gender
-            product.images = image
-            product.metaltype = metaltype
-            product.stonetype = stonetype
-            product.home_delivery = home_delivery
-            product.store_pickup = store_pickup
-            product.try_at_home = try_at_home
-            product.bestselling = bestseller
-            product.vendor = vendor  # Set the vendor for the product
-
-
-            product.save()
-            messages.success(request, "Product updated successfully!")
 
             # Handle product attributes
             attributes_data = request.POST.getlist('attributes')
@@ -1583,40 +1588,166 @@ def update_pro(request, product_id):
                 if attribute_id:
                     try:
                         category_attribute = CategoryAttribute.objects.get(id=attribute_id)
-                        attribute_name = category_attribute.name
-                        attribute_value = request.POST.get(f'attribute_{attribute_id}', '')
-
-                        # Update or create the product attribute
+                        attribute_value = request.POST.get(f'attribute_{attribute_id}')
                         if attribute_value:
-                            product_attribute, created = ProductAttribute.objects.update_or_create(
+                            ProductAttribute.objects.create(
                                 product=product,
-                                attribute_name=attribute_name,
-                                defaults={'attribute_value': attribute_value}
+                                attribute_name=category_attribute.name,
+                                attribute_value=attribute_value
                             )
                     except CategoryAttribute.DoesNotExist:
-                        messages.error(request, f"Attribute with ID {attribute_id} does not exist.")
+                        continue
                     except Exception as e:
-                        messages.error(request, f"Error updating attribute: {str(e)}")
+                        print(f"Error creating ProductAttribute: {str(e)}")
+                        continue
 
+            messages.success(request, "Product added successfully!")
             return redirect('product_list')
 
-        except (Category.DoesNotExist, Metaltype.DoesNotExist, Stonetype.DoesNotExist) as e:
-            messages.error(request, f"Error: {str(e)}")
-            return redirect('update_pro', product_id=product.product_id)
+        except Exception as e:
+            messages.error(request, f"Error adding product: {str(e)}")
+            return redirect('add_pro')
 
-    # GET request to render the page with existing product details
+    # GET request - render the form
     categories = Category.objects.all()
     metaltypes = Metaltype.objects.all()
     stonetypes = Stonetype.objects.all()
-    product_attributes = ProductAttribute.objects.filter(product=product)
+    vendors = Vendor.objects.all()
 
     context = {
-        'product': product,
         'categories': categories,
         'metaltypes': metaltypes,
         'stonetypes': stonetypes,
-        'product_attributes': product_attributes,
-        'vendors': vendors,  # Pass the list of vendors to the template
+        'vendors': vendors,
+    }
+    return render(request, 'admin/add_p.html', context)
+
+
+def update_pro(request, product_id):
+    product = get_object_or_404(Product, product_id=product_id)
+    
+    if request.method == 'POST':
+        try:
+            # Get basic product info
+            product.product_name = request.POST.get('product_name')
+            product.product_description = request.POST.get('product_description')
+            product.price = float(request.POST.get('price', 0))
+            product.stock_quantity = int(request.POST.get('stock_quantity', 0))
+            product.weight = float(request.POST.get('weight', 0))
+            product.gender = request.POST.get('gender', 'Unisex')
+
+            # Get category and types
+            category_id = request.POST.get('id_category')
+            metaltype_id = request.POST.get('metaltype')
+            stonetype_id = request.POST.get('stonetype')
+            vendor_id = request.POST.get('vendor')
+
+            # Update relationships
+            if category_id:
+                product.category = Category.objects.get(category_id=category_id)
+            if metaltype_id:
+                product.metaltype = Metaltype.objects.get(metaltype_id=metaltype_id)
+            if stonetype_id:
+                product.stonetype = Stonetype.objects.get(stonetype_id=stonetype_id)
+            if vendor_id:
+                product.vendor = Vendor.objects.get(vendor_id=vendor_id)
+
+            # Update additional specifications
+            product.bis_hallmark = request.POST.get('bis_hallmark')
+            product.making_charges = float(request.POST.get('making_charges', 0))
+            product.diamond_weight = float(request.POST.get('diamond_weight', 0))
+            product.diamond_quality = request.POST.get('diamond_quality')
+            product.estimated_delivery = int(request.POST.get('estimated_delivery', 7))
+
+            # Update delivery options
+            delivery_options = request.POST.getlist('delivery_options[]')
+            product.home_delivery = 'Home Delivery' in delivery_options
+            product.store_pickup = 'Store Pickup' in delivery_options
+            product.try_at_home = 'Try at Home' in delivery_options
+
+            # Update bestseller status
+            product.bestselling = request.POST.get('bestselling') == 'Yes'
+
+            # Handle image uploads
+            if 'image' in request.FILES:
+                product.images = request.FILES['image']
+            if 'image2' in request.FILES:
+                product.image2 = request.FILES['image2']
+            if 'image3' in request.FILES:
+                product.image3 = request.FILES['image3']
+            if 'image4' in request.FILES:
+                product.image4 = request.FILES['image4']
+            if 'product_video' in request.FILES:
+                product.product_video = request.FILES['product_video']
+
+            # Validate numeric ranges
+            if not (100 <= product.price <= 10000000):
+                raise ValueError("Price must be between 100 and 10,000,000")
+            if not (0 <= product.stock_quantity <= 50):
+                raise ValueError("Stock quantity must be between 0 and 50")
+            if not (1 <= product.weight <= 100):
+                raise ValueError("Weight must be between 1 and 100 grams")
+
+            # Check for duplicates (excluding current product)
+            existing_products = Product.objects.filter(
+                product_name__iexact=product.product_name,
+                category=product.category
+            ).exclude(product_id=product_id)
+
+            for existing_product in existing_products:
+                if abs(float(existing_product.weight) - product.weight) < 0.01:
+                    category_name = product.category.name
+                    messages.error(
+                        request, 
+                        f"""
+                        Duplicate Product Error:
+                        - Product Name: {product.product_name}
+                        - Category: {category_name}
+                        - Weight: {product.weight}g
+                        
+                        A product with these specifications already exists.
+                        Please modify the product name or weight.
+                        """
+                    )
+                    return redirect('update_pro', product_id=product_id)
+
+            # Save the updated product
+            product.save()
+            
+            # Update product attributes
+            ProductAttribute.objects.filter(product=product).delete()
+            attributes_data = request.POST.getlist('attributes')
+            for attribute_id in attributes_data:
+                if attribute_id:
+                    try:
+                        category_attribute = CategoryAttribute.objects.get(id=attribute_id)
+                        attribute_value = request.POST.get(f'attribute_{attribute_id}')
+                        if attribute_value:
+                            ProductAttribute.objects.create(
+                                product=product,
+                                attribute_name=category_attribute,
+                                attribute_value=attribute_value
+                            )
+                    except CategoryAttribute.DoesNotExist:
+                        continue
+
+            messages.success(request, "Product updated successfully!")
+            return redirect('product_list')
+
+        except ValueError as ve:
+            messages.error(request, str(ve))
+            return redirect('update_pro', product_id=product_id)
+        except Exception as e:
+            messages.error(request, f"Error updating product: {str(e)}")
+            return redirect('update_pro', product_id=product_id)
+
+    # GET request
+    context = {
+        'product': product,
+        'categories': Category.objects.all(),
+        'metaltypes': Metaltype.objects.all(),
+        'stonetypes': Stonetype.objects.all(),
+        'vendors': Vendor.objects.all(),
     }
     return render(request, 'admin/update_p.html', context)
 
@@ -1628,26 +1759,16 @@ from django.http import JsonResponse
 from .models import Category, CategoryAttribute
 
 def get_category_attributes(request, category_id):
-    print("hello")
     try:
-        # Get the category by its ID
-        category = Category.objects.get(category_id=category_id)
-
-        # Retrieve attributes associated with this category
-        attributes = CategoryAttribute.objects.filter(category=category)
-
-        # Prepare the response data in the expected format
-        response_data = {
-            'attributes': [{'id': attribute.id, 'name': attribute.name} for attribute in attributes]
-        }
-
-        return JsonResponse(response_data, safe=False)
-    except Category.DoesNotExist:
-        # If the category doesn't exist, return an empty list with a 404 status code
-        return JsonResponse({'error': 'Category not found'}, status=404)
+        attributes = CategoryAttribute.objects.filter(category_id=category_id)
+        data = [{
+            'id': attr.id,
+            'name': attr.name,
+            'datatype': attr.datatype
+        } for attr in attributes]
+        return JsonResponse({'attributes': data})
     except Exception as e:
-        # Handle other errors
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': str(e)}, status=400)
 
 
 
@@ -1759,8 +1880,7 @@ def product_list(request):
 #     }
 
 #     return render(request, 'user/all_products.html', context)
-
-#-----------------------------------------------------------------------------------------------------------------------------
+# //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 from django.shortcuts import render
 from .models import Product, Category, Metaltype, Stonetype, CategoryAttribute
 from .models import ProductAttribute
@@ -1925,9 +2045,9 @@ def detail(request, product_id):
     product = get_object_or_404(Product, pk=product_id)
 
     # API setup
-    api_key = 'goldapi-13te5osm64x6oty-io'
+    # api_key = 'goldapi-13te5osm64x6oty-io'
     headers = {
-        'x-access-token': api_key,
+        # 'x-access-token': api_key,
         'Content-Type': 'application/json',
     }
 
@@ -1943,7 +2063,7 @@ def detail(request, product_id):
 
     for metal, code in metals.items():
         try:
-            api_url = f'https://www.goldapi.io/api/{code}/INR'
+            # api_url = f'https://www.goldapi.io/api/{code}/INR'
             response = requests.get(api_url, headers=headers)
             if response.status_code == 200:
                 data = response.json()
@@ -1975,31 +2095,6 @@ def get_booked_dates_for_product(product):
     # Fetch all booked dates for the given product
     booked_dates = Booking.objects.filter(product=product).values_list('booking_date', flat=True)
     return list(booked_dates)
-
-
-
-# from django.shortcuts import render, get_object_or_404, redirect
-# from .models import Product, Tbl_user
-
-# def book_schedule(request, product_id):
-#     if 'login_id' not in request.session:
-#         return redirect('login')  
-    
-#     login_id = request.session.get('login_id')
-    
-#     user = get_object_or_404(Tbl_user, login_id=login_id)  
-    
-#     product = get_object_or_404(Product, pk=product_id)
-    
-#     booked_dates = get_booked_dates_for_product(product) 
-
-#     context = {
-#         'product': product,
-#         'user': user,
-#         'booked_dates': booked_dates
-#     }
-
-#     return render(request, 'user/schedule_booking.html', context)
 
 
 
@@ -2353,11 +2448,13 @@ def order_summary(request):
     
 
 
-    from django.http import JsonResponse
+
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
 from .models import Order, OrderItem, CartItem, Tbl_user, Billing, Product, Cart, Tbl_login
+
 
 @csrf_exempt
 def payment_success(request):
@@ -2442,125 +2539,6 @@ def payment_success(request):
 
 
 # ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-# from django.conf import settings
-# from .models import Tbl_login, Tbl_user, Cart, CartItem, Billing, Order, OrderItem, Product
-# import razorpay
-# from django.shortcuts import get_object_or_404, redirect, render
-# from django.contrib import messages
-
-# razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-# def checkout(request):
-#     if 'login_id' not in request.session:
-#         return redirect('login')
-
-#     login_id = request.session['login_id']
-#     login_user = get_object_or_404(Tbl_login, login_id=login_id)
-#     user = get_object_or_404(Tbl_user, login=login_user)
-
-#     cart = Cart.objects.filter(login=login_user).last()
-#     if not cart:
-#         messages.error(request, "No active cart found.")
-#         return redirect('view_cart') 
-
-#     cart_items = cart.items.filter(status=True)
-#     total_price = sum(item.product.price * item.quantity for item in cart_items)
-
-#     addresses = Billing.objects.filter(user=user)
-
-#     if request.method == 'POST':
-#         selected_address_id = request.POST.get('selected_address')
-#         if not selected_address_id:
-#             messages.error(request, "Please select a billing address.")
-#             return redirect('checkout')
-
-#         address = get_object_or_404(Billing, id=selected_address_id, user=user)
-
-#         try:
-            
-#             razorpay_order = razorpay_client.order.create({
-#                 "amount": int(total_price * 100), 
-#                 "currency": "INR",
-#                 "payment_capture": "1"
-#             })
-
-            
-#             request.session['razorpay_order_id'] = razorpay_order['id']
-#             request.session['selected_address_id'] = selected_address_id
-
-#             return render(request, 'user/billing.html', {
-#                 'razorpay_order_id': razorpay_order['id'],
-#                 'razorpay_key': settings.RAZORPAY_KEY_ID,
-#                 'total_price': total_price * 100,
-#             })
-#         except Exception as e:
-#             messages.error(request, f"Error creating Razorpay order: {str(e)}")
-#             return redirect('checkout')
-
-#     return render(request, 'user/billing.html', {
-#         'cart_items': cart_items,
-#         'total_price': total_price,
-#         'addresses': addresses
-#     })
-
-# ///////////////////////////////////////////////////////////////////////////////////////////////////////
-# def payment_success(request):
-#     if 'razorpay_order_id' not in request.session:
-#         messages.error(request, "No payment information found.")
-#         return redirect('checkout')
-
-#     login_id = request.session['login_id']
-#     login_user = get_object_or_404(Tbl_login, login_id=login_id)
-#     user = get_object_or_404(Tbl_user, login=login_user)
-
-#     razorpay_order_id = request.session.pop('razorpay_order_id')
-#     selected_address_id = request.session.pop('selected_address_id')
-#     address = get_object_or_404(Billing, id=selected_address_id, user=user)
-
-#     cart = Cart.objects.filter(login=login_user, is_completed=False).last()
-#     cart_items = cart.items.filter(status=True)
-#     total_price = sum(item.product.price * item.quantity for item in cart_items)
-
-#     try:
-#         order = Order.objects.create(
-#             user=user,
-#             billing=address,
-#             cart=cart,
-#             total_amount=total_price,
-#             status='Pending',
-#             payment_status='Success',
-#             razorpay_order_id=razorpay_order_id
-#         )
-
-#         for item in cart_items:
-#             product = item.product 
-            
-#             if product.stock_quantity < item.quantity:
-#                 raise ValueError(f"Insufficient stock for {product.product_name}. Only {product.stock_quantity} available.")
-
-#             product.stock_quantity -= item.quantity
-#             product.save()
-
-#             OrderItem.objects.create(
-#                 order=order,
-#                 product=product.product_name,
-#                 quantity=item.quantity,
-#                 price=product.price
-#             )
-            
-#             item.status = False
-#             item.save()
-
-#         cart.is_completed = True
-#         cart.save()
-
-#         messages.success(request, "Payment successful! Your order has been placed.")
-#         return redirect('order_history', order_id=order.id)
-
-#     except Exception as e:
-#         messages.error(request, f"Error processing payment: {str(e)}")
-#         return redirect('checkout')
-# //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Order, OrderItem, Tbl_user
@@ -2802,11 +2780,8 @@ def verify_otp(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
 
 
+# ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-# def staffhome(request):
-#     return render(request, 'staff/staffhome.html')
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.mail import send_mail
@@ -2815,27 +2790,6 @@ from .models import Booking
 from django.conf import settings
 from django.http import HttpResponseForbidden
 
-# Helper function to check if the user is a staff member
-# def is_staff_logged_in(request):
-#     return request.session.get('user_type') == 'staff' and 'login_id' in request.session
-
-# Staff Home Page View
-# def staffhome(request):
-    # Check if staff is logged in via session
-    # if not is_staff_logged_in(request):
-    #     return redirect('/login/')  # Redirect to login if not authenticated
-
-    # Fetch bookings assigned to the staff with status 'pending'
-    # bookings = Booking.objects.filter(
-    #     status='pending',
-    #     product__try_at_home=True
-    # ).select_related('user', 'product').order_by('-booking_date')
-    
-    # context = {
-    #     'bookings': bookings,
-    #     'name': request.session.get('name')  # Get the staff name from session
-    # }
-    # return render(request, 'staff/staffhome.html', context)
 
 # Accept Booking View
 def accept_booking(request, booking_id):
@@ -2865,7 +2819,15 @@ def accept_booking(request, booking_id):
 
     return redirect('staffhome')
 
-# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+from django.http import JsonResponse, Http404
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.dateparse import parse_date
+from datetime import datetime
+from .models import StoreVisit
+import json
+
 # old gold exachange
 import requests
 from django.http import JsonResponse
@@ -2974,13 +2936,6 @@ def save_pickup_details(request):
             return JsonResponse({'success': False, 'error': f'An error occurred: {str(e)}'})
     else:
         return JsonResponse({'success': False, 'error': 'Invalid request method.'})
-
-from django.http import JsonResponse, Http404
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.dateparse import parse_date
-from datetime import datetime
-from .models import StoreVisit
-import json
 
 
 @csrf_exempt
@@ -3116,31 +3071,52 @@ def update_or_cancel_store_visit(request, store_visit_id):
 
 
 
-from .models import VendorProduct
+# from .models import VendorProduct
 def vendor_home(request):
     if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
         return redirect('login')
 
     vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])
 
-    # Fetch total orders and customers
-    total_orders = Order.objects.filter(user__login=vendor.login).count()
-    total_customers = Tbl_user.objects.count()  # Assuming all users are customers
-
+    # Fetch purchase requests
+    purchase_requests = VendorPurchase.objects.filter(vendor=vendor).order_by('-purchase_date')
+    
     # Fetch restock requests
-    # restock_requests = RestockRequest.objects.filter(vendor_product__vendor=vendor, status='Pending')
+    restock_requests = RestockRequest.objects.filter(
+        product__vendor=vendor,
+        status='Pending'
+    ).order_by('-created_at')
+    
+    # Calculate statistics
+    total_products = VendorProduct.objects.filter(vendor=vendor).count()
+    pending_orders = VendorPurchase.objects.filter(
+        vendor=vendor,
+        status='pending'
+    ).count()
+    total_sales = VendorPayment.objects.filter(
+        vendor=vendor,
+        status='completed'
+    ).aggregate(total=Sum('amount_paid'))['total'] or 0
 
-    # Prepare data for trading performance chart
-    trading_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    trading_data = [100, 200, 150, 300, 250, 400, 350, 500, 450, 600, 550, 700]  # Example data
+    # Get payment requests where half of the products are purchased
+    payment_eligible_purchases = []
+    for purchase in purchase_requests.filter(status='accepted', payment__payment_type='post'):
+        purchased_count = Order.objects.filter(
+            cart__items__product__vendor=vendor,
+            status='Delivered'
+        ).count()
+        
+        if purchased_count >= (purchase.quantity / 2):
+            payment_eligible_purchases.append(purchase)
 
     context = {
         'vendor': vendor,
-        'total_orders': total_orders,
-        'total_customers': total_customers,
-        # 'restock_requests': restock_requests,
-        'trading_labels': trading_labels,
-        'trading_data': trading_data,
+        'purchase_requests': purchase_requests,
+        'restock_requests': restock_requests,
+        'total_products': total_products,
+        'pending_orders': pending_orders,
+        'total_sales': total_sales,
+        'payment_eligible_purchases': payment_eligible_purchases
     }
 
     return render(request, 'vendor/dashboard.html', context)
@@ -3344,163 +3320,99 @@ def verify_document(request):
 def verify_document_page(request):
     """Render the document verification page"""
     return render(request, 'admin/verify_vendor.html')
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from .models import Vendor, Category, Metaltype, Stonetype, VendorProduct  # Ensure VendorProduct is imported
-
-def vendor_add_product(request):
-    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
-        messages.error(request, 'You need to log in as a vendor to access this page.')
-        return redirect('login')
-
-    if request.method == 'POST':
-        product_name = request.POST.get('product_name')
-        category_id = request.POST.get('id_category')
-        product_description = request.POST.get('product_description')
-        price = request.POST.get('price')
-        stock_quantity = request.POST.get('stock_quantity')
-        weight = request.POST.get('weight')
-        metaltype_id = request.POST.get('metaltype')
-        stonetype_id = request.POST.get('stonetype')
-        gender = request.POST.get('gender', 'Unisex')  # Default to 'Unisex' if not provided
-        image = request.FILES.get('image')  # Get the uploaded image
-
-        # Validate the inputs
-        try:
-            price = float(price)
-            stock_quantity = int(stock_quantity)
-            weight = float(weight)
-        except ValueError:
-            messages.error(request, "Invalid input values.")
-            return redirect('vendor_add_product')
-
-        if not (100 <= price <= 10000000):
-            messages.error(request, "Price must be between 100 and 10,000,000.")
-            return redirect('vendor_add_product')
-
-        if not (0 <= stock_quantity <= 50):
-            messages.error(request, "Stock quantity must be between 0 and 50.")
-            return redirect('vendor_add_product')
-
-        if not (1 <= weight <= 100):
-            messages.error(request, "Weight must be between 1 and 100 grams.")
-            return redirect('vendor_add_product')
-
-        # Create the VendorProduct instance and save it
-        try:
-            vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])  # Fetch the vendor
-            vendor_product = VendorProduct(
-                vendor=vendor,
-                product_name=product_name,
-                product_description=product_description,
-                price=price,
-                stock_quantity=stock_quantity,
-                weight=weight,
-                gender=gender,
-                image=image,
-                category_id=category_id,
-                metaltype_id=metaltype_id,
-                stonetype_id=stonetype_id
-            )
-            vendor_product.save()
-
-            # Save category attributes
-            attributes_data = request.POST.getlist('attributes')
-            for attribute_id in attributes_data:
-                if attribute_id:  # Only proceed if the ID is not empty
-                    attribute_value = request.POST.get(f'attribute_{attribute_id}', '')
-                    if attribute_value:
-                        VendorProductAttribute.objects.create(
-                            vendor_product=vendor_product,
-                            attribute_name=attribute_id,  # Assuming you have a way to get the attribute name
-                            attribute_value=attribute_value
-                        )
-
-            messages.success(request, "Product added successfully!")
-            return redirect('vendor_view_products')  # Redirect to the view products page
-
-        except Exception as e:
-            messages.error(request, f"Error adding product: {str(e)}")
-            return redirect('vendor_add_product')
-
-    # GET request to render the page
-    categories = Category.objects.all()
-    metaltypes = Metaltype.objects.all()
-    stonetypes = Stonetype.objects.all()  # Fetch stonetypes from the database
-    vendors = Vendor.objects.all()  # Fetch all vendors
-
-    context = {
-        'categories': categories,
-        'metaltypes': metaltypes,
-        'stonetypes': stonetypes,  # Pass the list of stonetypes to the template
-        'vendors': vendors,  # Pass the list of vendors to the template
-    }
-    return render(request, 'vendor/add_product.html', context)
-
-def vendor_view_products(request):
-    print("Vendor View Products Called")  # Debugging line
-    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
-        return redirect('login')
-
-    vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])
-    
-    # Fetch products associated with the vendor from the VendorProduct table only
-    vendor_products = VendorProduct.objects.filter(vendor=vendor)
-
-    context = {
-        'products': vendor_products,  # Only pass vendor products to the template
-        'vendor': vendor,
-    }
-    return render(request, 'vendor/view_products.html', context)
 
 
-def vendor_edit_product(request, product_id):
-    print(f"Editing product with ID: {product_id}")  # Debugging line
-    if not request.session.get('user_type') == 'vendor':
-        messages.error(request, 'You need to log in as a vendor to access this page.')
-        return redirect('login')
-        
-    product = get_object_or_404(VendorProduct, pk=product_id, vendor__login_id=request.session['login_id'])
-    
-    if request.method == 'POST':
-        try:
-            # Update product fields based on the form data
-            product.product_name = request.POST['product_name']
-            product.product_description = request.POST['product_description']
-            product.price = float(request.POST['price'])
-            product.stock_quantity = int(request.POST['stock_quantity'])
-            product.weight = float(request.POST['weight'])
-            product.gender = request.POST['gender']
+# def vendor_add_product(request):
+#     if request.method == 'POST':
+#         try:
+#             # Get the vendor instance
+#             vendor = Vendor.objects.get(login_id=request.session['login_id'])
             
-            # Update category, metal type, and stone type
-            product.category_id = request.POST['id_category']
-            product.metaltype_id = request.POST['metaltype']
-            product.stonetype_id = request.POST['stonetype']
-            
-            # Handle image upload
-            if 'image' in request.FILES:
-                product.image = request.FILES['image']
-            
-            # Save the updated product
-            product.save()
-            messages.success(request, 'Product updated successfully!')
-            return redirect('vendor_view_products')
-        except Exception as e:
-            messages.error(request, f'Error updating product: {str(e)}')
-    
-    # Fetch categories, metal types, and stone types for the form
-    categories = Category.objects.all()
-    metaltypes = Metaltype.objects.all()
-    stonetypes = Stonetype.objects.all()
-    
-    context = {
-        'product': product,
-        'categories': categories,
-        'metaltypes': metaltypes,
-        'stonetypes': stonetypes,
-    }
-    
-    return render(request, 'vendor/edit_product.html', context)
+#             # Create the main product
+#             product = VendorProduct(
+#                 vendor=vendor,
+#                 product_name=request.POST['product_name'],
+#                 product_description=request.POST['product_description'],
+#                 category_id=request.POST['category'],
+#                 metaltype_id=request.POST['metaltype'],
+#                 weight=float(request.POST['weight']),
+#                 purity=int(request.POST['purity']),
+#                 gender=request.POST['gender'],
+#                 bis_hallmark=request.POST.get('bis_hallmark'),
+#                 estimated_delivery=int(request.POST.get('estimated_delivery', 7)),
+#                 stock_quantity=int(request.POST['stock_quantity']),
+#                 home_delivery=bool(request.POST.get('home_delivery')),
+#                 store_pickup=bool(request.POST.get('store_pickup')),
+#                 try_at_home=bool(request.POST.get('try_at_home'))
+#             )
+
+#             # Handle image uploads
+#             if 'image' in request.FILES:
+#                 product.image = request.FILES['image']
+#             if 'image2' in request.FILES:
+#                 product.image2 = request.FILES['image2']
+#             if 'image3' in request.FILES:
+#                 product.image3 = request.FILES['image3']
+#             if 'image4' in request.FILES:
+#                 product.image4 = request.FILES['image4']
+#             if 'product_video' in request.FILES:
+#                 product.product_video = request.FILES['product_video']
+
+#             # Save the product first to get an ID
+#             product.save()
+
+#             # Handle stone details
+#             stone_types = request.POST.getlist('stonetype[]')
+#             for i, stone_type in enumerate(stone_types):
+#                 if stone_type:
+#                     is_diamond = request.POST.getlist('is_diamond[]')[i] == 'true'
+                    
+#                     stone = VendorProductStone(
+#                         vendor_product=product,
+#                         stone_type_id=stone_type,
+#                         is_diamond=is_diamond
+#                     )
+
+#                     if is_diamond:
+#                         stone.diamond_weight = float(request.POST.getlist('diamond_weight[]')[i])
+#                         stone.diamond_count = int(request.POST.getlist('diamond_count[]')[i])
+#                         stone.diamond_quality = request.POST.getlist('diamond_quality[]')[i]
+#                     else:
+#                         stone.stone_weight = float(request.POST.getlist('stone_weight[]')[i])
+#                         stone.stone_count = int(request.POST.getlist('stone_count[]')[i])
+#                         stone.stone_clarity = request.POST.getlist('stone_clarity[]')[i]
+                    
+#                     stone.save()
+#                     stone.calculate_stone_cost()
+
+#             # Handle category attributes
+#             for key, value in request.POST.items():
+#                 if key.startswith('attribute_'):
+#                     attr_id = key.split('_')[1]
+#                     VendorProductAttribute.objects.create(
+#                         vendor_product=product,
+#                         attribute_name=request.POST.get(f'attribute_name_{attr_id}'),
+#                         attribute_value=value
+#                     )
+
+#             # Recalculate all prices
+#             product.calculate_prices()
+#             product.save()
+
+#             messages.success(request, 'Product added successfully!')
+#             return redirect('vendor_home')
+
+#         except Exception as e:
+#             messages.error(request, f'Error adding product: {str(e)}')
+#             return redirect('vendor_add_product')
+
+#     # GET request - show the form
+#     context = {
+#         'categories': Category.objects.all(),
+#         'metaltypes': Metaltype.objects.all(),
+#         'stonetypes': Stonetype.objects.all()
+#     }
+#     return render(request, 'vendor/add_product.html', context)
 
 def vendor_pending_orders(request):
     if not request.user.is_authenticated or request.session.get('user_type') != 'vendor':
@@ -3519,8 +3431,9 @@ def vendor_pending_orders(request):
 
 
 def vendor_order_history(request):
-    if not request.session.get('user_type') == 'vendor':
-        messages.error(request, 'You need to log in as a supplier to access this page.')
+    """View for displaying vendor's order history"""
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        messages.error(request, 'Please login as a vendor to continue')
         return redirect('login')
     
     completed_orders = RestockRequest.objects.filter(
@@ -3797,16 +3710,81 @@ def view_new_products(request):
 
 @require_POST
 def send_purchase_request(request):
-    data = json.loads(request.body)
-    product_id = data.get('product_id')
-    quantity = data.get('quantity')
+    if 'login_id' not in request.session:
+        return JsonResponse({'status': 'error', 'message': 'Not logged in'}, status=401)
+    
+    try:
+        login = Tbl_login.objects.get(login_id=request.session['login_id'])
+        if 'admin' not in login.email.lower():
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
 
-    # Logic to send the purchase request to the vendor
-    # This could involve creating a new OrderRequest model or similar
-    # For example:
-    # OrderRequest.objects.create(product_id=product_id, quantity=quantity, vendor=vendor)
+        data = json.loads(request.body)
+        vendor_product_id = data.get('vendor_product_id')
+        quantity = data.get('quantity', 1)
+        expected_arrival = data.get('expected_arrival')
+        payment_type = data.get('payment_type')
+        total_amount = data.get('total_amount')
+        amount_to_pay = data.get('amount_to_pay', 0)
+        payment_id = data.get('payment_id')
 
-    return JsonResponse({'status': 'success'})
+        if not expected_arrival:
+            return JsonResponse({'status': 'error', 'message': 'Expected arrival date is required'}, status=400)
+
+        # Validate expected arrival date
+        try:
+            expected_arrival_date = datetime.strptime(expected_arrival, '%Y-%m-%d').date()
+            if expected_arrival_date <= date.today():
+                return JsonResponse({'status': 'error', 'message': 'Expected arrival date must be in the future'}, status=400)
+        except ValueError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid date format'}, status=400)
+
+        # Get the vendor product
+        vendor_product = VendorProduct.objects.select_related('vendor', 'pricing_details').get(vendor_product_id=vendor_product_id)
+
+        # Determine payment status based on payment type
+        if payment_type == 'post':
+            payment_status = 'pending'
+            amount_paid = 0
+        else:
+            payment_status = 'partial_paid' if payment_type in ['advance', 'half'] else 'completed'
+            amount_paid = amount_to_pay
+
+        # Create vendor payment record
+        vendor_payment = VendorPayment.objects.create(
+            vendor=vendor_product.vendor,
+            payment_id=payment_id,
+            amount=total_amount,
+            amount_paid=amount_paid,
+            remaining_amount=total_amount - amount_paid,
+            product_name=vendor_product.product_name,
+            quantity=quantity,
+            payment_purpose='purchase',
+            payment_type=payment_type,
+            status=payment_status
+        )
+
+        # Create vendor purchase record
+        vendor_purchase = VendorPurchase.objects.create(
+            vendor=vendor_product.vendor,
+            product_name=vendor_product.product_name,
+            quantity=quantity,
+            total_amount=total_amount,
+            expected_arrival=expected_arrival_date,
+            status='pending',
+            payment=vendor_payment
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Purchase request sent successfully',
+            'purchase_id': vendor_purchase.id,
+            'payment_id': vendor_payment.id
+        })
+
+    except VendorProduct.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Product not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 from django.http import JsonResponse
 
@@ -4133,3 +4111,2120 @@ def view_payments(request):
     return render(request, 'admin/view_payments.html', context)  # Render the payments template
 
 # ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+from django.shortcuts import render
+from django.core.files.storage import FileSystemStorage
+from django.conf import settings
+import os
+from jewelryapp.ai_models.utils import predict_ring_size
+
+# AI-based ring style recommendations
+def suggest_ring_style(ring_size):
+    size_num = int(ring_size.split(" ")[-1])
+    
+    if size_num <= 10:
+        return "Slim & Minimalist Rings"
+    elif size_num <= 20:
+        return "Classic Band Rings"
+    else:
+        return "Bold & Statement Rings"
+
+# View to handle image upload and ring size prediction
+def ring_size_prediction(request):
+    if request.method == 'POST' and request.FILES.get('hand_image'):
+        try:
+            # Save uploaded image
+            image = request.FILES['hand_image']
+            temp_path = os.path.join(settings.MEDIA_ROOT, 'temp', image.name)
+            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+            
+            with open(temp_path, 'wb+') as destination:
+                for chunk in image.chunks():
+                    destination.write(chunk)
+
+            # Get prediction
+            ring_size, measurement = predict_ring_size(temp_path)
+            
+            # Clean up temp file
+            os.remove(temp_path)
+
+            if measurement is None:
+                return JsonResponse({'error': ring_size}, status=500)
+
+            return JsonResponse({
+                'ring_size': ring_size,
+                'measurement': f"{measurement:.1f}mm"
+            })
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return render(request, 'user/find_your_ring_size.html')
+
+def find_ring_size(request):
+    """Render the ring size finder page"""
+    return render(request, 'user/find_your_ring_size.html')
+
+# Update the existing ring_size_prediction view to handle CSRF properly
+@csrf_exempt  # Add this decorator since we're handling file upload via AJAX
+def ring_size_prediction(request):
+    try:
+        ensure_directories_exist()
+        
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+        image_data = request.POST.get('image')
+        if not image_data:
+            return JsonResponse({'error': 'No image data received'}, status=400)
+
+        try:
+            if 'base64,' in image_data:
+                image_data = image_data.split('base64,')[1]
+            
+            image_binary = base64.b64decode(image_data)
+            filename = f'hand_image_{time.time()}.jpg'
+            temp_path = os.path.join(settings.MEDIA_ROOT, 'temp', filename)
+            
+            with open(temp_path, 'wb') as f:
+                f.write(image_binary)
+
+            # Get prediction and landmarks
+            ring_size, measurement, landmarks = predict_ring_size(temp_path)
+            
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception as e:
+                logger.error(f"Error removing temp file: {str(e)}")
+
+            if measurement is None:
+                return JsonResponse({
+                    'error': ring_size,
+                    'landmarks': None
+                }, status=200)
+
+            # Convert landmarks to pixel coordinates if available
+            landmark_data = None
+            if landmarks:
+                img = cv2.imread(temp_path)
+                if img is not None:  # Check if image was loaded successfully
+                    h, w = img.shape[:2]
+                    landmark_data = [
+                        {'x': int(lm.x * w), 'y': int(lm.y * h)}
+                        for lm in landmarks.landmark
+                    ]
+
+            return JsonResponse({
+                'ring_size': ring_size,
+                'measurement': f"{measurement:.1f}",
+                'landmarks': landmark_data
+            })
+
+        except Exception as e:
+            logger.error(f"Error processing image: {str(e)}")
+            return JsonResponse({
+                'error': str(e),
+                'landmarks': None
+            }, status=200)
+
+    except Exception as e:
+        logger.error(f"Server error: {str(e)}")
+        return JsonResponse({
+            'error': 'Internal server error',
+            'details': str(e),
+            'landmarks': None
+        }, status=500)
+
+def ensure_directories_exist():
+    """Create necessary directories if they don't exist"""
+    media_root = settings.MEDIA_ROOT
+    temp_dir = os.path.join(media_root, 'temp')
+    ai_models_dir = os.path.join(media_root, 'ai_models')
+    
+    for directory in [media_root, temp_dir, ai_models_dir]:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+# ////////////////////////////////////////////////////////////////////////////////////////////////////////
+# AR virtual try on
+
+from django.shortcuts import render
+from .models import Product
+
+def virtual_tryon(request):
+    jewelry_items = Product.objects.filter(
+        images__isnull=False,
+        is_active=True
+    ).select_related('category')
+    
+    categories = Category.objects.all()
+    
+    return render(request, 'user/tryon.html', {
+        'jewelry_items': jewelry_items,
+        'categories': categories,
+        'perfect_corp_api_key': settings.PERFECT_CORP_API_KEY
+    })
+
+from django.http import JsonResponse
+
+def get_products_by_category(request, category):
+    try:
+        # Validate category exists
+        if not Category.objects.filter(name=category).exists():
+            return JsonResponse({
+                'error': f'Invalid category: {category}'
+            }, status=400)
+        
+        # First, let's log what we received
+        print(f"Received category request for: {category}")
+        
+        # Get all categories from database for debugging
+        all_categories = list(Category.objects.values_list('name', flat=True))
+        print(f"All available categories in database: {all_categories}")
+        
+        # Query products directly without mapping
+        products = Product.objects.filter(
+            category__name=category,  # Use exact match
+            images__isnull=False,
+            is_active=True
+        ).values('product_id', 'product_name', 'images')
+        
+        if not products:
+            print(f"No products found for category: {category}")
+            return JsonResponse([], safe=False)
+        
+        product_list = [{
+            'id': product['product_id'],
+            'name': product['product_name'],
+            'image_url': request.build_absolute_uri(settings.MEDIA_URL + str(product['images']))
+        } for product in products]
+        
+        print(f"Found {len(product_list)} products for category: {category}")
+        print("Sample product:", product_list[0] if product_list else "No products")
+        
+        return JsonResponse(product_list, safe=False)
+    except Exception as e:
+        print(f"Error in get_products_by_category: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+from django.http import HttpResponse
+
+def debug_categories(request):
+    categories = Category.objects.all().values_list('name', flat=True)
+    return HttpResponse(f"Available categories: {list(categories)}")
+# /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+def add_review(request, product_id):
+    if request.method == 'POST':
+        if 'login_id' not in request.session:
+            return JsonResponse({
+                'success': False,
+                'message': 'Please login to submit a review'
+            })
+        
+        product = get_object_or_404(Product, product_id=product_id)
+        try:
+            user = Tbl_user.objects.get(login__login_id=request.session['login_id'])
+        except Tbl_user.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'User profile not found'
+            })
+        
+        # Check if user has purchased the product
+        has_purchased = Order.objects.filter(
+            user=user,
+            order_items__product=product.product_name,
+            status='Delivered'
+        ).exists()
+        
+        if not has_purchased:
+            return JsonResponse({
+                'success': False,
+                'message': 'You can only review products you have purchased'
+            })
+        
+        try:
+            rating = int(request.POST.get('rating'))
+            comment = request.POST.get('comment')
+            image = request.FILES.get('image')
+            
+            # Debug: Print received data
+            print(f"Received review - Rating: {rating}, Comment: {comment}")
+            
+            # Update or create review
+            review, created = Review.objects.update_or_create(
+                product=product,
+                user=user,
+                defaults={
+                    'rating': rating,
+                    'comment': comment,
+                    'image': image if image else None
+                }
+            )
+            
+            # Debug: Print saved review
+            print(f"Review saved - ID: {review.id}, Rating: {review.rating}, Comment: {review.comment}")
+            
+            # Update product's average rating
+            avg_rating = Review.objects.filter(product=product).aggregate(Avg('rating'))['rating__avg']
+            product.ratings = round(avg_rating, 2) if avg_rating else 0
+            product.total_ratings = Review.objects.filter(product=product).count()
+            product.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Your review has been submitted successfully'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error saving review: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Invalid request method'
+    })
+
+def view_product_reviews(request, product_id):
+    product = get_object_or_404(Product, product_id=product_id)
+    reviews = Review.objects.filter(product=product).select_related('user')
+    
+    context = {
+        'product': product,
+        'reviews': reviews,
+    }
+    return render(request, 'user/all_details.html', context)
+
+@decorator_from_middleware(CacheMiddleware)
+def view_all_reviews(request):
+    if 'user_type' not in request.session or request.session['user_type'] != 'admin':
+        messages.error(request, 'You need to log in as an admin to access this page.')
+        return redirect('login')
+    
+    reviews = Review.objects.all().select_related('product', 'user').order_by('-created_at')
+    context = {
+        'reviews': reviews
+    }
+    return render(request, 'admin/view_reviews.html', context)
+
+from django.http import JsonResponse
+import requests
+
+def gold_rates(request):
+    calculator = PriceCalculator()
+    rate = calculator.get_gold_rate()
+    
+    return JsonResponse({
+        'success': True,
+        'rate': rate,
+        'timestamp': datetime.now().timestamp(),
+        'currency': 'INR'
+    })
+
+def get_diamond_price(request):
+    calculator = PriceCalculator()
+    quality = request.GET.get('quality')
+    weight = float(request.GET.get('weight', 0))
+    
+    price = calculator.get_diamond_price(quality, weight)
+    
+    return JsonResponse({
+        'success': True,
+        'price_per_carat': price,
+        'quality': quality
+    })
+
+def calculate_product_price(request):
+    if request.method == 'POST':
+        calculator = PriceCalculator()
+        
+        # Get parameters from request
+        weight = float(request.POST.get('weight', 0))
+        purity = int(request.POST.get('purity', 24))
+        diamond_weight = float(request.POST.get('diamond_weight', 0))
+        diamond_quality = request.POST.get('diamond_quality', '')
+        diamond_count = int(request.POST.get('diamond_count', 0))
+
+        # Calculate costs
+        gold_rate = calculator.get_gold_rate()
+        metal_cost = calculator.calculate_metal_cost(weight, purity, gold_rate)
+        diamond_price = calculator.get_diamond_price(diamond_quality, diamond_weight)
+        diamond_cost = diamond_price * diamond_weight * diamond_count
+
+        # Calculate total price
+        price_details = calculator.calculate_total_price(metal_cost, diamond_cost)
+        
+        return JsonResponse(price_details)
+
+
+
+# /////////////////////////////////////////////////////////////////////////////////////////////
+# vendor views
+
+def vendor_add_product(request):
+    try:
+        vendor = Vendor.objects.get(login_id=request.session['login_id'])
+    except Vendor.DoesNotExist:
+        messages.error(request, 'Vendor not found')
+        return redirect('login')
+    
+    # Hardcoded metal and stone data
+    metal_data = {
+        'gold': [
+            {'purity': '24', 'percentage': 99.9, 'rate': 5500},
+            {'purity': '22', 'percentage': 91.6, 'rate': 5060},
+            {'purity': '18', 'percentage': 75.0, 'rate': 4125},
+            {'purity': '14', 'percentage': 58.3, 'rate': 3206}
+        ],
+        'silver': [
+            {'purity': '999', 'percentage': 99.9, 'rate': 75},
+            {'purity': '925', 'percentage': 92.5, 'rate': 69}
+        ],
+        'platinum': [
+            {'purity': '950', 'percentage': 95.0, 'rate': 3200},
+            {'purity': '900', 'percentage': 90.0, 'rate': 3000}
+        ]
+    }
+
+    stone_data = {
+        'diamond': [
+            {'grade': 'D-IF', 'clarity': 'Internally Flawless', 'multiplier': 2.0},
+            {'grade': 'E-VVS1', 'clarity': 'Very Very Slightly Included 1', 'multiplier': 1.8},
+            {'grade': 'F-VVS2', 'clarity': 'Very Very Slightly Included 2', 'multiplier': 1.6},
+            {'grade': 'G-VS1', 'clarity': 'Very Slightly Included 1', 'multiplier': 1.4},
+            {'grade': 'H-VS2', 'clarity': 'Very Slightly Included 2', 'multiplier': 1.2},
+            {'grade': 'I-SI1', 'clarity': 'Slightly Included 1', 'multiplier': 1.0},
+            {'grade': 'J-SI2', 'clarity': 'Slightly Included 2', 'multiplier': 0.8}
+        ],
+        'ruby': [
+            {'grade': 'pigeon-blood', 'clarity': 'Pigeon Blood Red', 'multiplier': 2.0},
+            {'grade': 'vivid-red', 'clarity': 'Vivid Red', 'multiplier': 1.5},
+            {'grade': 'medium-red', 'clarity': 'Medium Red', 'multiplier': 1.0}
+        ],
+        'sapphire': [
+            {'grade': 'royal-blue', 'clarity': 'Royal Blue', 'multiplier': 2.0},
+            {'grade': 'cornflower-blue', 'clarity': 'Cornflower Blue', 'multiplier': 1.5},
+            {'grade': 'medium-blue', 'clarity': 'Medium Blue', 'multiplier': 1.0}
+        ],
+        'emerald': [
+            {'grade': 'muzo-green', 'clarity': 'Vivid Green', 'multiplier': 2.0},
+            {'grade': 'vivid-green', 'clarity': 'Medium Green', 'multiplier': 1.5},
+            {'grade': 'medium-green', 'clarity': 'Light Green', 'multiplier': 1.0}
+        ]
+    }
+
+    if request.method == 'POST':
+        try:
+            # Debug logging for form data
+            print("="*50)
+            print("DEBUG: Form Data Received")
+            print("="*50)
+            print("Basic Product Details:")
+            print(f"Product Name: {request.POST.get('product_name')}")
+            print(f"Category ID: {request.POST.get('category')}")
+            print(f"Description: {request.POST.get('description')}")
+            
+            print("\nMetal Details:")
+            print(f"Metal Type ID: {request.POST.get('metaltype')}")
+            print(f"Metal Weight: {request.POST.get('weight')}")
+            print(f"Metal Purity: {request.POST.get('purity')}")
+            print(f"Making Charges %: {request.POST.get('making_charges_percentage')}")
+            
+            print("\nStone Details:")
+            stone_types = request.POST.getlist('stonetype[]')
+            stone_weights = request.POST.getlist('stone_weight[]')
+            stone_counts = request.POST.getlist('stone_count[]')
+            stone_qualities = request.POST.getlist('stone_quality[]')
+            print(f"Stone Types: {stone_types}")
+            print(f"Stone Weights: {stone_weights}")
+            print(f"Stone Counts: {stone_counts}")
+            print(f"Stone Qualities: {stone_qualities}")
+            
+            print("\nAdditional Details:")
+            print(f"Stock Quantity: {request.POST.get('stock_quantity')}")
+            print(f"BIS Hallmark: {request.POST.get('bis_hallmark')}")
+            print(f"Estimated Delivery: {request.POST.get('estimated_delivery')}")
+            print(f"Gender: {request.POST.get('gender')}")
+            print(f"Home Delivery: {request.POST.get('home_delivery')}")
+            print(f"Store Pickup: {request.POST.get('store_pickup')}")
+            print(f"Try at Home: {request.POST.get('try_at_home')}")
+            
+            print("\nFiles:")
+            print(f"Main Image: {request.FILES.get('main_image')}")
+            print(f"Image 2: {request.FILES.get('image2')}")
+            print(f"Image 3: {request.FILES.get('image3')}")
+            print(f"Image 4: {request.FILES.get('image4')}")
+            print(f"Product Video: {request.FILES.get('product_video')}")
+            print("="*50)
+
+            # Create basic product
+            product = VendorProduct.objects.create(
+                vendor=vendor,
+                product_name=request.POST['product_name'],
+                category_id=request.POST['category'],
+                product_description=request.POST['description']
+            )
+            print("\nCreated VendorProduct:", product.vendor_product_id)
+
+            # Create metal details
+            metal_type_id = request.POST.get('metaltype')
+            purity_value = request.POST.get('purity')
+            weight = Decimal(request.POST.get('weight', '0'))
+            current_rate = Decimal(request.POST.get('current_rate', '0').replace(',', ''))
+            
+            # Get or create MetalPurity instance
+            metal_type = Metaltype.objects.get(metaltype_id=metal_type_id)  # Changed from id to metaltype_id
+            metal_purity, _ = MetalPurity.objects.get_or_create(
+                metal_type=metal_type,
+                purity_value=purity_value,
+                defaults={
+                    'purity_percentage': Decimal(purity_value) * (Decimal('100')/Decimal('24')) if metal_type.name.lower() == 'gold' else Decimal(purity_value)/Decimal('10'),
+                    'description': f"{purity_value}{'K' if metal_type.name.lower() == 'gold' else ''} {metal_type.name}"
+                }
+            )
+
+            # Create VendorProductMetal with correct fields
+            metal_total_cost = weight * current_rate * (Decimal(str(metal_purity.purity_percentage)) / Decimal('100'))
+
+            metal = VendorProductMetal.objects.create(
+                vendor_product=product,
+                metal_type=metal_type,
+                purity=metal_purity,
+                weight=weight,
+                rate_per_gram=current_rate,
+                total_cost=metal_total_cost
+            )
+            print("\nCreated VendorProductMetal:", metal.id)
+            print(f"Metal details - Weight: {weight}, Rate: {current_rate}, Purity %: {metal_purity.purity_percentage}, Total: {metal_total_cost}")
+
+            # Create stone details
+            total_stone_cost = Decimal('0')
+            for i in range(len(stone_types)):
+                if stone_types[i] and stone_types[i] != '':  # Only process if stone type is selected and not empty
+                    stone_type_id = stone_types[i]
+                    stone_weight = Decimal(stone_weights[i])
+                    stone_count = int(stone_counts[i])
+                    stone_quality = stone_qualities[i]
+                    stone_rate = Decimal(request.POST.getlist('stone_rate[]')[i].replace(',', ''))
+                    
+                    # Get or create StonePurity instance
+                    stone_type = Stonetype.objects.get(stonetype_id=stone_type_id)
+                    stone_purity, _ = StonePurity.objects.get_or_create(
+                        stone_type=stone_type,
+                        purity_grade=stone_quality,
+                        defaults={
+                            'clarity_rating': stone_quality,
+                            'description': f"{stone_quality} {stone_type.name}",
+                            'price_multiplier': Decimal('1.0')  # Default multiplier
+                        }
+                    )
+
+                    # Calculate stone cost
+                    stone_total_cost = stone_weight * stone_rate * Decimal(str(stone_count))
+
+                    stone = VendorProductStone.objects.create(
+                        vendor_product=product,
+                        stone_type=stone_type,
+                        weight=stone_weight,
+                        count=stone_count,
+                        quality=stone_quality,
+                        rate_per_carat=stone_rate,
+                        total_cost=stone_total_cost
+                    )
+                    total_stone_cost += stone_total_cost
+                    print(f"\nCreated VendorProductStone {i+1}:", stone.id)
+                    print(f"Stone details - Weight: {stone_weight}, Count: {stone_count}, Rate: {stone_rate}, Total: {stone_total_cost}")
+
+            # Create pricing details
+            making_charges_percentage = Decimal(request.POST.get('making_charges_percentage', '0'))
+            metal_cost = Decimal(request.POST.get('metal_cost', '0').replace(',', ''))
+            stone_cost = Decimal(request.POST.get('total_stone_cost', '0').replace(',', ''))
+            making_charges = (metal_cost * making_charges_percentage) / Decimal('100')
+            total_price = metal_cost + stone_cost + making_charges
+
+            print("\nPricing Details:")
+            print(f"Metal Cost: {metal_cost}")
+            print(f"Stone Cost: {stone_cost}")
+            print(f"Making Charges %: {making_charges_percentage}")
+            print(f"Making Charges: {making_charges}")
+            print(f"Total Price: {total_price}")
+
+            pricing = VendorProductPricing.objects.create(
+                vendor_product=product,
+                metal_cost=metal_cost,
+                stone_cost=stone_cost,
+                making_charges_percentage=making_charges_percentage,
+                making_charges=making_charges,
+                total_price=total_price
+            )
+            print("\nCreated VendorProductPricing:", pricing.id)
+
+            # Create additional details
+            additional = VendorAdditionalDetails.objects.create(
+                vendor_product=product,
+                stock_quantity=int(request.POST.get('stock_quantity', 0)),
+                bis_hallmark=request.POST.get('bis_hallmark', ''),
+                estimated_delivery=int(request.POST.get('estimated_delivery', 7)),
+                gender=request.POST.get('gender', 'Unisex'),
+                home_delivery=request.POST.get('home_delivery') == 'on',
+                store_pickup=request.POST.get('store_pickup') == 'on',
+                try_at_home=request.POST.get('try_at_home') == 'on'
+            )
+            print("\nCreated VendorAdditionalDetails:", additional.id)
+
+            # Handle images and video
+            if 'main_image' in request.FILES:
+                images = VendorProductImage.objects.create(
+                    vendor_product=product,
+                    main_image=request.FILES['main_image'],
+                    image2=request.FILES.get('image2'),
+                    image3=request.FILES.get('image3'),
+                    image4=request.FILES.get('image4'),
+                    product_video=request.FILES.get('product_video')
+                )
+                print("\nCreated VendorProductImage:", images.id)
+
+            # Handle category attributes
+            category_attributes = request.POST.get('category_attributes')
+            if category_attributes:
+                try:
+                    attributes_data = json.loads(category_attributes)
+                    for attr_id, attr_value in attributes_data.items():
+                        if attr_value:  # Only create if value is not empty
+                            try:
+                                category_attribute = CategoryAttribute.objects.get(id=attr_id)
+                                VendorProductAttribute.objects.create(
+                                    vendor_product=product,
+                                    attribute_name=category_attribute.name,
+                                    attribute_value=attr_value,
+                                    datatype=category_attribute.datatype
+                                )
+                                print(f"\nCreated VendorProductAttribute: {category_attribute.name} = {attr_value}")
+                            except CategoryAttribute.DoesNotExist:
+                                print(f"\nWarning: CategoryAttribute with id {attr_id} not found")
+                except json.JSONDecodeError:
+                    print("\nWarning: Invalid JSON in category_attributes")
+
+                messages.success(request, 'Product added successfully!')
+            return redirect('vendor_home')
+
+        except Exception as e:
+            print("\nERROR:", str(e))
+            print("="*50)
+            messages.error(request, f'Error adding product: {str(e)}')
+            return redirect('vendor_add_product')
+
+    # GET request - prepare form context
+    context = {
+        'categories': Category.objects.all(),
+        'metaltypes': Metaltype.objects.all(),
+        'stonetypes': Stonetype.objects.all(),
+        'metal_data': metal_data,
+        'stone_data': stone_data,
+    }
+    return render(request, 'vendor/add_product.html', context)
+
+def get_metal_rate(request):
+    """API endpoint to get current metal rate"""
+    metal_type = request.GET.get('metal_type')
+    try:
+        rate = get_current_metal_rate(metal_type)
+        current_time = timezone.now()
+        return JsonResponse({
+            'success': True, 
+            'rate': rate,
+            'currency': 'INR/gram',
+            'timestamp': current_time.strftime('%Y-%m-%d %H:%M:%S')
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False, 
+            'error': str(e),
+            'rate': settings.PRICE_SETTINGS['DEFAULT_GOLD_RATE'],  # Fallback rate
+            'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+
+# Add these utility functions to utils.py if not already present
+def get_diamond_rate(quality):
+    """Get diamond rate based on quality"""
+    # Updated rates based on quality (price per carat in INR)
+    rates = {
+        'D-IF': 1000000,    # Flawless
+        'E-VVS1': 800000,   # Very Very Slightly Included 1
+        'F-VVS2': 700000,   # Very Very Slightly Included 2
+        'G-VS1': 600000,    # Very Slightly Included 1
+        'H-VS2': 500000,    # Very Slightly Included 2
+        'I-SI1': 400000,    # Slightly Included 1
+        'J-SI2': 300000     # Slightly Included 2
+    }
+    return rates.get(quality, 300000)  # Default to lowest rate if quality not found
+
+def get_gemstone_rate(stone_type):
+    """Get current gemstone rate based on type"""
+    rates = {
+        'ruby': 5000,
+        'emerald': 4000,
+        'sapphire': 3000,
+        # Add more stone types and rates
+    }
+    return rates.get(stone_type.lower(), 0)
+
+def get_current_metal_rate(metal_type):
+    """Get current metal rate based on type"""
+    rates = {
+        'Gold': 5500,    # Price per gram
+        'Silver': 75,
+        'Platinum': 3200
+    }
+    return rates.get(metal_type, 0)
+
+def get_stone_rate(request):
+    """API endpoint to get stone rates"""
+    try:
+        # Clean the input data
+        stone_type = request.GET.get('stone_type', '').strip().lower()
+        quality = request.GET.get('quality', '').strip()
+        weight = float(request.GET.get('weight', 0))
+        count = int(request.GET.get('count', 1))
+        
+        calculator = PriceCalculator()
+        
+        if stone_type == 'diamond':
+            # Handle diamond pricing
+            base_rate = calculator.get_diamond_price(quality, 1.0)  # Get rate for 1 carat
+            total_price = calculator.calculate_stone_cost(True, weight, quality, count)
+            return JsonResponse({
+                'success': True,
+                'rate': base_rate,
+                'total_price': total_price,
+                'weight_multiplier_applied': weight >= 0.5
+            })
+        else:
+            # Handle other gemstones
+            base_rate = calculator.get_gemstone_price(stone_type, quality, 1.0)  # Get rate for 1 carat
+            total_price = calculator.calculate_stone_cost(False, weight, stone_type, count)
+            return JsonResponse({
+                'success': True,
+                'rate': base_rate,
+                'total_price': total_price,
+                'weight_multiplier_applied': False
+            })
+    except Exception as e:
+        print(f"Error in get_stone_rate: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+def vendor_metal_purities(request):
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+    
+    # Get real-time metal purities from Gemini API
+    from .utils.gemini_helper import get_metal_purities, update_metal_prices
+    
+    if request.method == 'POST':
+        try:
+            # Create new metal purity
+            metal_purity = MetalPurity.objects.create(
+                metal_type_id=request.POST['metal_type'],
+                purity_value=request.POST['purity_value'],
+                purity_percentage=float(request.POST['purity_percentage']),
+                description=request.POST['description']
+            )
+            messages.success(request, 'Metal purity added successfully!')
+            
+            # Update prices after adding new purity
+            update_metal_prices()
+            
+            return redirect('vendor_metal_purities')
+        except Exception as e:
+            messages.error(request, f'Error adding metal purity: {str(e)}')
+    
+    # GET request
+    context = {
+        'metaltypes': Metaltype.objects.all(),
+        'metal_purities': MetalPurity.objects.all().select_related('metal_type'),
+        'real_time_data': get_metal_purities()  # Add real-time data to context
+    }
+    return render(request, 'vendor/add_metal_purity.html', context)
+
+def edit_metal_purity(request, purity_id):
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+    
+    try:
+        purity = MetalPurity.objects.get(id=purity_id)
+    except MetalPurity.DoesNotExist:
+        messages.error(request, 'Metal purity not found.')
+        return redirect('vendor_metal_purities')
+    
+    if request.method == 'POST':
+        try:
+            purity.metal_type_id = request.POST['metal_type']
+            purity.purity_value = request.POST['purity_value']
+            purity.purity_percentage = float(request.POST['purity_percentage'])
+            purity.description = request.POST['description']
+            purity.save()
+            messages.success(request, 'Metal purity updated successfully!')
+            return redirect('vendor_metal_purities')
+        except Exception as e:
+            messages.error(request, f'Error updating metal purity: {str(e)}')
+    
+    context = {
+        'metaltypes': Metaltype.objects.all(),
+        'purity': purity
+    }
+    return render(request, 'vendor/edit_metal_purity.html', context)
+
+def delete_metal_purity(request, purity_id):
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+    
+    try:
+        purity = MetalPurity.objects.get(id=purity_id)
+        purity.delete()
+        messages.success(request, 'Metal purity deleted successfully!')
+    except MetalPurity.DoesNotExist:
+        messages.error(request, 'Metal purity not found.')
+    except Exception as e:
+        messages.error(request, f'Error deleting metal purity: {str(e)}')
+    
+    return redirect('vendor_metal_purities')
+
+def vendor_stone_purities(request):
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+    
+    # Get real-time stone purities from Gemini API
+    from .utils.gemini_helper import get_stone_purities
+    
+    if request.method == 'POST':
+        try:
+            # Create new stone purity
+            stone_purity = StonePurity.objects.create(
+                stone_type_id=request.POST['stone_type'],
+                purity_grade=request.POST['purity_grade'],
+                clarity_rating=request.POST['clarity_rating'],
+                description=request.POST['description'],
+                price_multiplier=float(request.POST['price_multiplier'])
+            )
+            messages.success(request, 'Stone purity added successfully!')
+            return redirect('vendor_stone_purities')
+        except Exception as e:
+            messages.error(request, f'Error adding stone purity: {str(e)}')
+    
+    # GET request
+    context = {
+        'stonetypes': Stonetype.objects.all(),
+        'stone_purities': StonePurity.objects.all().select_related('stone_type'),
+        'real_time_data': get_stone_purities()  # Add real-time data to context
+    }
+    return render(request, 'vendor/add_stone_purity.html', context)
+
+def edit_stone_purity(request, purity_id):
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+    
+    try:
+        purity = StonePurity.objects.get(id=purity_id)
+    except StonePurity.DoesNotExist:
+        messages.error(request, 'Stone purity not found.')
+        return redirect('vendor_stone_purities')
+    
+    if request.method == 'POST':
+        try:
+            purity.stone_type_id = request.POST['stone_type']
+            purity.purity_grade = request.POST['purity_grade']
+            purity.clarity_rating = request.POST['clarity_rating']
+            purity.description = request.POST['description']
+            purity.price_multiplier = float(request.POST['price_multiplier'])
+            purity.save()
+            messages.success(request, 'Stone purity updated successfully!')
+            return redirect('vendor_stone_purities')
+        except Exception as e:
+            messages.error(request, f'Error updating stone purity: {str(e)}')
+    
+    context = {
+        'stonetypes': Stonetype.objects.all(),
+        'purity': purity
+    }
+    return render(request, 'vendor/edit_stone_purity.html', context)
+
+def delete_stone_purity(request, purity_id):
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+    
+    try:
+        purity = StonePurity.objects.get(id=purity_id)
+        purity.delete()
+        messages.success(request, 'Stone purity deleted successfully!')
+    except StonePurity.DoesNotExist:
+        messages.error(request, 'Stone purity not found.')
+    except Exception as e:
+        messages.error(request, f'Error deleting stone purity: {str(e)}')
+    
+    return redirect('vendor_stone_purities')
+
+def vendor_products(request):
+    if request.session.get('user_type') != 'vendor':
+        messages.error(request, 'You need to be logged in as a vendor to access this page.')
+        return redirect('login')
+    
+    try:
+        vendor = Vendor.objects.get(login_id=request.session['login_id'])
+        products = VendorProduct.objects.filter(vendor=vendor).select_related(
+            'category',
+            'metal_details',
+            'metal_details__metal_type',
+            'metal_details__purity',
+            'pricing_details',
+            'additional_details',
+            'images'
+        ).prefetch_related('stones', 'stones__stone_type')
+        
+        context = {
+            'products': products,
+            'vendor': vendor
+        }
+        return render(request, 'vendor/products.html', context)
+    except Vendor.DoesNotExist:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('login')
+
+@require_POST
+def vendor_toggle_product_status(request, product_id):
+    if request.session.get('user_type') != 'vendor':
+        return JsonResponse({'success': False, 'error': 'Unauthorized access'})
+    
+    try:
+        product = get_object_or_404(VendorProduct, 
+                                  vendor_product_id=product_id, 
+                                  vendor__login_id=request.session['login_id'])
+        product.is_active = not product.is_active
+        product.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def vendor_edit_product(request, product_id):
+    if request.session.get('user_type') != 'vendor':
+        messages.error(request, 'You need to be logged in as a vendor to access this page.')
+        return redirect('login')
+    
+    try:
+        from decimal import Decimal
+        
+        vendor = Vendor.objects.get(login_id=request.session['login_id'])
+        product = get_object_or_404(
+            VendorProduct.objects.select_related(
+                'category',
+                'metal_details',
+                'metal_details__metal_type',
+                'metal_details__purity',
+                'pricing_details',
+                'additional_details',
+                'images'
+            ).prefetch_related('stones', 'stones__stone_type'),
+            vendor_product_id=product_id,
+            vendor=vendor
+        )
+
+        if request.method == 'POST':
+            try:
+                # Update basic product details
+                product.product_name = request.POST['product_name']
+                product.category_id = request.POST['category']
+                product.product_description = request.POST['description']
+                product.save()
+
+                # Update metal details
+                metal_type_id = request.POST.get('metaltype')
+                purity_value = request.POST.get('purity', '0')
+                
+                # Safe conversion of numerical values with defaults
+                try:
+                    weight = Decimal(request.POST.get('weight', '0').strip() or '0')
+                except (TypeError, ValueError):
+                    weight = Decimal('0')
+                    
+                try:
+                    current_rate = Decimal(request.POST.get('current_rate', '0').strip().replace(',', '') or '0')
+                except (TypeError, ValueError):
+                    current_rate = Decimal('0')
+                
+                if metal_type_id:
+                    metal_type = Metaltype.objects.get(metaltype_id=metal_type_id)
+                    try:
+                        purity_percentage = Decimal(purity_value or '0')
+                        if metal_type.name.lower() == 'gold':
+                            purity_percentage = purity_percentage * (Decimal('100')/Decimal('24'))
+                        else:
+                            purity_percentage = purity_percentage / Decimal('10')
+                    except (TypeError, ValueError):
+                        purity_percentage = Decimal('0')
+                        
+                    metal_purity, _ = MetalPurity.objects.get_or_create(
+                        metal_type=metal_type,
+                        purity_value=purity_value,
+                        defaults={
+                            'purity_percentage': purity_percentage,
+                            'description': f"{purity_value}{'K' if metal_type.name.lower() == 'gold' else ''} {metal_type.name}"
+                        }
+                    )
+
+                    metal_total_cost = weight * current_rate * (Decimal(str(metal_purity.purity_percentage)) / Decimal('100'))
+
+                    if hasattr(product, 'metal_details'):
+                        product.metal_details.metal_type = metal_type
+                        product.metal_details.purity = metal_purity
+                        product.metal_details.weight = weight
+                        product.metal_details.rate_per_gram = current_rate
+                        product.metal_details.total_cost = metal_total_cost
+                        product.metal_details.save()
+                    else:
+                        VendorProductMetal.objects.create(
+                            vendor_product=product,
+                            metal_type=metal_type,
+                            purity=metal_purity,
+                            weight=weight,
+                            rate_per_gram=current_rate,
+                            total_cost=metal_total_cost
+                        )
+
+                # Update stone details with safe conversion
+                stone_types = request.POST.getlist('stonetype[]')
+                stone_weights = request.POST.getlist('stone_weight[]')
+                stone_counts = request.POST.getlist('stone_count[]')
+                stone_qualities = request.POST.getlist('stone_quality[]')
+                stone_rates = request.POST.getlist('stone_rate[]')
+
+                # Delete existing stones
+                product.stones.all().delete()
+                
+                # Add new stones
+                total_stone_cost = Decimal('0')
+                for i in range(len(stone_types)):
+                    if stone_types[i] and stone_types[i] != '':
+                        try:
+                            stone_weight = Decimal(stone_weights[i].strip() or '0')
+                        except (TypeError, ValueError, IndexError):
+                            stone_weight = Decimal('0')
+                            
+                        try:
+                            stone_count = int(stone_counts[i].strip() or '0')
+                        except (TypeError, ValueError, IndexError):
+                            stone_count = 0
+                            
+                        try:
+                            stone_rate = Decimal(stone_rates[i].strip().replace(',', '') or '0')
+                        except (TypeError, ValueError, IndexError):
+                            stone_rate = Decimal('0')
+                        
+                        stone_type = Stonetype.objects.get(stonetype_id=stone_types[i])
+                        stone_quality = stone_qualities[i] if i < len(stone_qualities) else ''
+                        
+                        stone_total_cost = stone_weight * stone_rate * Decimal(str(stone_count))
+                        
+                        stone = VendorProductStone.objects.create(
+                            vendor_product=product,
+                            stone_type=stone_type,
+                            weight=stone_weight,
+                            count=stone_count,
+                            quality=stone_quality,
+                            rate_per_carat=stone_rate,
+                            total_cost=stone_total_cost
+                        )
+                        total_stone_cost += stone_total_cost
+
+                # Update pricing details with safe conversion
+                try:
+                    making_charges_percentage = Decimal(request.POST.get('making_charges_percentage', '0').strip() or '0')
+                except (TypeError, ValueError):
+                    making_charges_percentage = Decimal('0')
+                    
+                metal_cost = metal_total_cost if 'metal_total_cost' in locals() else Decimal('0')
+                stone_cost = total_stone_cost
+                making_charges = (metal_cost * making_charges_percentage) / Decimal('100')
+                total_price = metal_cost + stone_cost + making_charges
+
+                if hasattr(product, 'pricing_details'):
+                    product.pricing_details.metal_cost = metal_cost
+                    product.pricing_details.stone_cost = stone_cost
+                    product.pricing_details.making_charges_percentage = making_charges_percentage
+                    product.pricing_details.making_charges = making_charges
+                    product.pricing_details.total_price = total_price
+                    product.pricing_details.save()
+                else:
+                    VendorProductPricing.objects.create(
+                        vendor_product=product,
+                        metal_cost=metal_cost,
+                        stone_cost=stone_cost,
+                        making_charges_percentage=making_charges_percentage,
+                        making_charges=making_charges,
+                        total_price=total_price
+                    )
+
+                # Update additional details
+                if hasattr(product, 'additional_details'):
+                    product.additional_details.stock_quantity = int(request.POST.get('stock_quantity', 0))
+                    product.additional_details.bis_hallmark = request.POST.get('bis_hallmark', '')
+                    product.additional_details.estimated_delivery = int(request.POST.get('estimated_delivery', 7))
+                    product.additional_details.gender = request.POST.get('gender', 'Unisex')
+                    product.additional_details.home_delivery = request.POST.get('home_delivery') == 'on'
+                    product.additional_details.store_pickup = request.POST.get('store_pickup') == 'on'
+                    product.additional_details.try_at_home = request.POST.get('try_at_home') == 'on'
+                    product.additional_details.save()
+                else:
+                    VendorAdditionalDetails.objects.create(
+                        vendor_product=product,
+                        stock_quantity=int(request.POST.get('stock_quantity', 0)),
+                        bis_hallmark=request.POST.get('bis_hallmark', ''),
+                        estimated_delivery=int(request.POST.get('estimated_delivery', 7)),
+                        gender=request.POST.get('gender', 'Unisex'),
+                        home_delivery=request.POST.get('home_delivery') == 'on',
+                        store_pickup=request.POST.get('store_pickup') == 'on',
+                        try_at_home=request.POST.get('try_at_home') == 'on'
+                    )
+
+                # Update images
+                if hasattr(product, 'images'):
+                    images_changed = False
+                    
+                    # Handle image removals
+                    if request.POST.get('remove_main_image') == 'true':
+                        if product.images.main_image:
+                            product.images.main_image.delete()
+                            images_changed = True
+                    
+                    if request.POST.get('remove_image2') == 'true':
+                        if product.images.image2:
+                            product.images.image2.delete()
+                            images_changed = True
+                    
+                    if request.POST.get('remove_image3') == 'true':
+                        if product.images.image3:
+                            product.images.image3.delete()
+                            images_changed = True
+                    
+                    if request.POST.get('remove_image4') == 'true':
+                        if product.images.image4:
+                            product.images.image4.delete()
+                            images_changed = True
+                    
+                    if request.POST.get('remove_product_video') == 'true':
+                        if product.images.product_video:
+                            product.images.product_video.delete()
+                            images_changed = True
+
+                    # Handle new image uploads
+                    if 'main_image' in request.FILES:
+                        product.images.main_image = request.FILES['main_image']
+                        images_changed = True
+                    if 'image2' in request.FILES:
+                        product.images.image2 = request.FILES['image2']
+                        images_changed = True
+                    if 'image3' in request.FILES:
+                        product.images.image3 = request.FILES['image3']
+                        images_changed = True
+                    if 'image4' in request.FILES:
+                        product.images.image4 = request.FILES['image4']
+                        images_changed = True
+                    if 'product_video' in request.FILES:
+                        product.images.product_video = request.FILES['product_video']
+                        images_changed = True
+
+                    if images_changed:
+                        product.images.save()
+                else:
+                    # Create new VendorProductImage if there are any images to upload
+                    if any(key in request.FILES for key in ['main_image', 'image2', 'image3', 'image4', 'product_video']):
+                        VendorProductImage.objects.create(
+                            vendor_product=product,
+                            main_image=request.FILES.get('main_image'),
+                            image2=request.FILES.get('image2'),
+                            image3=request.FILES.get('image3'),
+                            image4=request.FILES.get('image4'),
+                            product_video=request.FILES.get('product_video')
+                        )
+
+                messages.success(request, 'Product updated successfully!')
+                return redirect('vendor_products')
+
+            except Exception as e:
+                messages.error(request, f'Error updating product: {str(e)}')
+                return redirect('vendor_edit_product', product_id=product_id)
+
+        # GET request - prepare form context
+        metal_data = {
+            'gold': [
+                {'purity': '24', 'percentage': 99.9, 'rate': 5500},
+                {'purity': '22', 'percentage': 91.6, 'rate': 5060},
+                {'purity': '18', 'percentage': 75.0, 'rate': 4125},
+                {'purity': '14', 'percentage': 58.3, 'rate': 3206}
+            ],
+            'silver': [
+                {'purity': '999', 'percentage': 99.9, 'rate': 75},
+                {'purity': '925', 'percentage': 92.5, 'rate': 69}
+            ],
+            'platinum': [
+                {'purity': '950', 'percentage': 95.0, 'rate': 3200},
+                {'purity': '900', 'percentage': 90.0, 'rate': 3000}
+            ]
+        }
+
+        stone_data = {
+            'diamond': [
+                {'grade': 'D-IF', 'clarity': 'Internally Flawless', 'multiplier': 2.0},
+                {'grade': 'E-VVS1', 'clarity': 'Very Very Slightly Included 1', 'multiplier': 1.8},
+                {'grade': 'F-VVS2', 'clarity': 'Very Very Slightly Included 2', 'multiplier': 1.6},
+                {'grade': 'G-VS1', 'clarity': 'Very Slightly Included 1', 'multiplier': 1.4},
+                {'grade': 'H-VS2', 'clarity': 'Very Slightly Included 2', 'multiplier': 1.2},
+                {'grade': 'I-SI1', 'clarity': 'Slightly Included 1', 'multiplier': 1.0},
+                {'grade': 'J-SI2', 'clarity': 'Slightly Included 2', 'multiplier': 0.8}
+            ],
+            'ruby': [
+                {'grade': 'pigeon-blood', 'clarity': 'Pigeon Blood Red', 'multiplier': 2.0},
+                {'grade': 'vivid-red', 'clarity': 'Vivid Red', 'multiplier': 1.5},
+                {'grade': 'medium-red', 'clarity': 'Medium Red', 'multiplier': 1.0}
+            ],
+            'sapphire': [
+                {'grade': 'royal-blue', 'clarity': 'Royal Blue', 'multiplier': 2.0},
+                {'grade': 'cornflower-blue', 'clarity': 'Cornflower Blue', 'multiplier': 1.5},
+                {'grade': 'medium-blue', 'clarity': 'Medium Blue', 'multiplier': 1.0}
+            ],
+            'emerald': [
+                {'grade': 'muzo-green', 'clarity': 'Vivid Green', 'multiplier': 2.0},
+                {'grade': 'vivid-green', 'clarity': 'Medium Green', 'multiplier': 1.5},
+                {'grade': 'medium-green', 'clarity': 'Light Green', 'multiplier': 1.0}
+            ]
+        }
+
+        context = {
+            'product': product,
+            'categories': Category.objects.all(),
+            'metaltypes': Metaltype.objects.all(),
+            'stonetypes': Stonetype.objects.all(),
+            'metal_data': metal_data,
+            'stone_data': stone_data,
+        }
+        return render(request, 'vendor/edit_product.html', context)
+
+    except Vendor.DoesNotExist:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('login')
+
+# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+@decorator_from_middleware(CacheMiddleware)
+def admin_vendor_products(request):
+    # Check if user is logged in and is admin
+    if 'login_id' not in request.session:
+        return redirect('login')
+    
+    try:
+        login = Tbl_login.objects.get(login_id=request.session['login_id'])
+        # Check if the user is an admin by checking if email contains 'admin'
+        if 'admin' not in login.email.lower():
+            return HttpResponseForbidden("Unauthorized access")
+
+        # Get all vendor products with related data
+        vendor_products = VendorProduct.objects.select_related(
+            'vendor',
+            'category',
+            'images',
+            'metal_details',
+            'additional_details',
+            'pricing_details'
+        ).prefetch_related(
+            'stones',
+            'attributes'
+        ).all()
+
+        context = {
+            'vendor_products': vendor_products
+        }
+        return render(request, 'admin/vendor_products.html', context)
+
+    except Tbl_login.DoesNotExist:
+        return redirect('login')
+
+@decorator_from_middleware(CacheMiddleware)
+def get_vendor_product_details(request, product_id):
+    if 'login_id' not in request.session:
+        return JsonResponse({'error': 'Not logged in'}, status=401)
+    
+    try:
+        login = Tbl_login.objects.get(login_id=request.session['login_id'])
+        if 'admin' not in login.email.lower():
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+        product = VendorProduct.objects.select_related(
+            'vendor',
+            'category',
+            'images',
+            'metal_details',
+            'additional_details',
+            'pricing_details'
+        ).prefetch_related(
+            'stones',
+            'attributes'
+        ).get(vendor_product_id=product_id)
+
+        # Get the request's scheme and host for absolute URLs
+        scheme = request.scheme
+        host = request.get_host()
+
+        # Helper function to get absolute URL for media files
+        def get_absolute_url(media_url):
+            if media_url:
+                return f"{scheme}://{host}{media_url}"
+            return None
+
+        data = {
+            'vendor_product_id': product.vendor_product_id,
+            'product_name': product.product_name,
+            'product_description': product.product_description,
+            'category': product.category.name,
+            'vendor': product.vendor.business_name,
+            'images': {
+                'main_image': get_absolute_url(product.images.main_image.url) if product.images and product.images.main_image else None,
+                'image2': get_absolute_url(product.images.image2.url) if product.images and product.images.image2 else None,
+                'image3': get_absolute_url(product.images.image3.url) if product.images and product.images.image3 else None,
+                'image4': get_absolute_url(product.images.image4.url) if product.images and product.images.image4 else None,
+            },
+            'metal_details': {
+                'metal_type': product.metal_details.metal_type.name if product.metal_details else None,
+                'purity': f"{product.metal_details.purity.purity_value} ({product.metal_details.purity.description})" if product.metal_details and product.metal_details.purity else None,
+                'weight': str(product.metal_details.weight) if product.metal_details else None,
+                'rate_per_gram': str(product.metal_details.rate_per_gram) if product.metal_details else None,
+            },
+            'stones': [{
+                'stone_type': stone.stone_type.name,
+                'weight': str(stone.weight),
+                'count': stone.count,
+                'quality': stone.quality,
+                'rate_per_carat': str(stone.rate_per_carat),
+            } for stone in product.stones.all()],
+            'additional_details': {
+                'stock_quantity': product.additional_details.stock_quantity if product.additional_details else None,
+                'bis_hallmark': product.additional_details.bis_hallmark if product.additional_details else None,
+                'estimated_delivery': product.additional_details.estimated_delivery if product.additional_details else None,
+                'gender': product.additional_details.gender if product.additional_details else None,
+                'home_delivery': product.additional_details.home_delivery if product.additional_details else None,
+                'store_pickup': product.additional_details.store_pickup if product.additional_details else None,
+                'try_at_home': product.additional_details.try_at_home if product.additional_details else None,
+            },
+            'attributes': [{
+                'attribute_name': attr.attribute_name,
+                'attribute_value': attr.attribute_value,
+            } for attr in product.attributes.all()],
+            'pricing_details': {
+                'metal_cost': str(product.pricing_details.metal_cost) if product.pricing_details else None,
+                'stone_cost': str(product.pricing_details.stone_cost) if product.pricing_details else None,
+                'making_charges_percentage': str(product.pricing_details.making_charges_percentage) if product.pricing_details else None,
+                'making_charges': str(product.pricing_details.making_charges) if product.pricing_details else None,
+                'total_price': str(product.pricing_details.total_price) if product.pricing_details else None,
+            }
+        }
+        
+        return JsonResponse(data)
+
+    except VendorProduct.DoesNotExist:
+        return JsonResponse({'error': 'Product not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+
+@decorator_from_middleware(CacheMiddleware)
+def admin_vendor_products(request):
+    # Check if user is logged in and is admin
+    if not request.session.get('login_id'):
+        return redirect('login')
+    
+    try:
+        login = Tbl_login.objects.get(login_id=request.session['login_id'])
+        if not login.email == 'admin@gmail.com':
+            return HttpResponseForbidden("Unauthorized access")
+
+        # Get all vendor products that are active
+        vendor_products = VendorProduct.objects.filter(is_active=True).select_related(
+            'vendor', 
+            'category',
+            'metal_details',
+            'pricing_details',
+            'images',
+            'additional_details'
+        ).prefetch_related('stones', 'attributes')
+
+        context = {
+            'vendor_products': vendor_products
+        }
+        return render(request, 'admin/vendor_products.html', context)
+    except Tbl_login.DoesNotExist:
+        return redirect('login')
+    except Exception as e:
+        print(f"Error in admin_vendor_products: {e}")
+        return HttpResponse("An error occurred", status=500)
+
+@decorator_from_middleware(CacheMiddleware)
+def get_vendor_product_details(request, product_id):
+    try:
+        product = VendorProduct.objects.select_related(
+            'vendor',
+            'category',
+            'metal_details',
+            'metal_details__metal_type',
+            'metal_details__purity',
+            'pricing_details',
+            'images',
+            'additional_details'
+        ).prefetch_related('stones', 'attributes').get(vendor_product_id=product_id)
+
+        def get_absolute_url(media_url):
+            if not media_url:
+                return None
+            if settings.DEBUG:
+                return f"{settings.MEDIA_URL}{media_url}"
+            return media_url
+
+        data = {
+            'vendor_product_id': product.vendor_product_id,
+            'product_name': product.product_name,
+            'vendor': product.vendor.business_name,
+            'category': product.category.name,
+            'product_description': product.product_description,
+            'images': {
+                'main_image': get_absolute_url(product.images.main_image) if product.images else None,
+                'image2': get_absolute_url(product.images.image2) if product.images and product.images.image2 else None,
+                'image3': get_absolute_url(product.images.image3) if product.images and product.images.image3 else None,
+                'image4': get_absolute_url(product.images.image4) if product.images and product.images.image4 else None,
+            },
+            'metal_details': {
+                'metal_type': product.metal_details.metal_type.name,
+                'purity': f"{product.metal_details.purity.purity_value} ({product.metal_details.purity.purity_percentage}%)",
+                'weight': str(product.metal_details.weight),
+                'rate_per_gram': str(product.metal_details.rate_per_gram)
+            } if product.metal_details else None,
+            'stones': [{
+                'stone_type': stone.stone_type.name,
+                'weight': str(stone.weight),
+                'count': stone.count,
+                'quality': stone.quality,
+                'rate_per_carat': str(stone.rate_per_carat)
+            } for stone in product.stones.all()],
+            'additional_details': {
+                'stock_quantity': product.additional_details.stock_quantity,
+                'bis_hallmark': product.additional_details.bis_hallmark,
+                'estimated_delivery': product.additional_details.estimated_delivery,
+                'gender': product.additional_details.gender,
+                'home_delivery': product.additional_details.home_delivery,
+                'store_pickup': product.additional_details.store_pickup,
+                'try_at_home': product.additional_details.try_at_home
+            } if product.additional_details else None,
+            'attributes': [{
+                'attribute_name': attr.attribute_name,
+                'attribute_value': attr.attribute_value,
+            } for attr in product.attributes.all()],
+            'pricing_details': {
+                'metal_cost': str(product.pricing_details.metal_cost) if product.pricing_details else None,
+                'stone_cost': str(product.pricing_details.stone_cost) if product.pricing_details else None,
+                'making_charges_percentage': str(product.pricing_details.making_charges_percentage) if product.pricing_details else None,
+                'making_charges': str(product.pricing_details.making_charges) if product.pricing_details else None,
+                'total_price': str(product.pricing_details.total_price) if product.pricing_details else None,
+            }
+        }
+        
+        return JsonResponse(data)
+
+    except VendorProduct.DoesNotExist:
+        return JsonResponse({'error': 'Product not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@require_POST
+def send_purchase_request(request):
+    if not request.session.get('login_id'):
+        return JsonResponse({'status': 'error', 'message': 'Please login to continue'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        vendor_product = VendorProduct.objects.select_related('vendor').get(vendor_product_id=data['vendor_product_id'])
+        
+        # Validate quantity
+        if data['quantity'] <= 0:
+            return JsonResponse({'status': 'error', 'message': 'Invalid quantity'}, status=400)
+        
+        # Validate expected arrival date
+        expected_arrival = datetime.strptime(data['expected_arrival'], '%Y-%m-%d').date()
+        if expected_arrival <= date.today():
+            return JsonResponse({'status': 'error', 'message': 'Expected arrival date must be in the future'}, status=400)
+
+        # Create purchase request
+        purchase = VendorPurchase.objects.create(
+            vendor=vendor_product.vendor,
+            product_name=vendor_product.product_name,
+            quantity=data['quantity'],
+            total_amount=data['total_amount'],
+            expected_arrival=expected_arrival,
+            status='pending'
+        )
+
+        # Send notification to vendor (you can implement this based on your notification system)
+        # send_vendor_notification(vendor_product.vendor, purchase)
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Purchase request sent successfully',
+            'purchase_id': purchase.id
+        })
+
+    except VendorProduct.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Product not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request data'}, status=400)
+    except Exception as e:
+        print(f"Error in send_purchase_request: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@require_POST
+def process_payment(request):
+    if not request.session.get('login_id'):
+        return JsonResponse({'status': 'error', 'message': 'Please login to continue'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        payment = VendorPayment.objects.get(id=data['payment_id'])
+        
+        # Update payment details
+        payment.payment_type = data['payment_type']
+        payment.amount_paid = data['amount_paid']
+        payment.remaining_amount = payment.amount - payment.amount_paid
+        
+        if payment.amount_paid >= payment.amount:
+            payment.status = 'completed'
+        elif payment.amount_paid > 0:
+            payment.status = 'partial_paid'
+        
+        payment.save()
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Payment processed successfully',
+            'payment_status': payment.status
+        })
+
+    except VendorPayment.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Payment not found'}, status=404)
+    except Exception as e:
+        print(f"Error in process_payment: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+def vendor_purchase_requests(request):
+    """View for vendor to see and manage purchase requests"""
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+    
+    try:
+        vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])
+        
+        # Get all purchase requests for this vendor
+        purchases = VendorPurchase.objects.filter(vendor=vendor).order_by('-purchase_date')
+        
+        # Process each purchase to add payment information
+        for purchase in purchases:
+            # Get payment information if exists
+            if purchase.payment:
+                payment = purchase.payment
+                purchase.payment_status = payment.status
+                purchase.paid_amount = payment.amount_paid
+                purchase.remaining_amount = payment.remaining_amount
+                purchase.payment_requested = True
+            else:
+                purchase.payment_status = 'pending'
+                purchase.paid_amount = 0
+                purchase.remaining_amount = purchase.total_amount
+                purchase.payment_requested = False
+            
+            # Get date change request if exists
+            date_request = DateChangeRequest.objects.filter(
+                purchase=purchase,
+                status='pending'
+            ).first()
+            
+            if date_request:
+                purchase.has_date_update_request = True
+                purchase.requested_arrival_date = date_request.requested_date
+            else:
+                purchase.has_date_update_request = False
+                purchase.requested_arrival_date = None
+        
+        context = {
+            'purchases': purchases,
+            'vendor': vendor
+        }
+        
+        return render(request, 'vendor/purchase_requests.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Error loading purchase requests: {str(e)}')
+        return redirect('vendor_home')
+
+
+@require_POST
+def vendor_request_date_change(request, purchase_id):
+    """Handle vendor's request to change delivery date"""
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return JsonResponse({'status': 'error', 'message': 'Please login as a vendor to continue'}, status=401)
+    
+    try:
+        vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])
+        purchase = VendorPurchase.objects.get(id=purchase_id, vendor=vendor)
+        
+        data = json.loads(request.body)
+        new_date = datetime.strptime(data['new_date'], '%Y-%m-%d').date()
+        reason = data['reason']
+        
+        if new_date <= date.today():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'There is already a pending date change request for this purchase'
+            })
+        
+        # Create date change request
+        DateChangeRequest.objects.create(
+            purchase=purchase,
+            requested_date=new_date,
+            reason=reason,
+            status='pending'
+        )
+        
+        # Update the purchase to indicate there's a pending date change request
+        purchase.has_date_update_request = True
+        purchase.requested_arrival_date = new_date
+        purchase.save()
+        
+        # Send email to admin
+        admin_email = admin123@gmail.com
+        subject = f'Date Change Request for Purchase #{purchase.id}'
+        message = f"""
+        Vendor {vendor.business_name} has requested to change the delivery date for purchase #{purchase.id}
+        
+        Product: {purchase.product_name}
+        Current Date: {purchase.expected_arrival}
+        Requested Date: {new_date}
+        
+        Reason: {reason}
+        
+        Please review this request in the admin panel.
+        """
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [admin_email])
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Date change request sent successfully'
+        })
+        
+    except (Vendor.DoesNotExist, VendorPurchase.DoesNotExist):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Purchase request not found'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+@require_POST
+def vendor_request_payment(request, purchase_id):
+    """Handle vendor's request for payment"""
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return JsonResponse({'status': 'error', 'message': 'Please login as a vendor to continue'}, status=401)
+    
+    try:
+        vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])
+        purchase = VendorPurchase.objects.get(id=purchase_id, vendor=vendor)
+        
+        if purchase.status != 'accepted':
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Can only request payment for accepted purchases'
+            })
+        
+        data = json.loads(request.body)
+        requested_amount = Decimal(data['amount'])
+        notes = data.get('notes', '')
+        
+        # Check if there's already a payment record
+        if purchase.payment:
+            payment = purchase.payment
+            if payment.status == 'completed':
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Payment has already been completed for this purchase'
+                })
+            if payment.status == 'pending':
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'There is already a pending payment request for this purchase'
+                })
+        else:
+            # Create new payment record
+            payment = VendorPayment.objects.create(
+                vendor=vendor,
+                amount=purchase.total_amount,
+                amount_paid=requested_amount,
+                remaining_amount=purchase.total_amount - requested_amount,
+                product_name=purchase.product_name,
+                quantity=purchase.quantity,
+                payment_purpose='purchase',
+                payment_type='advance' if requested_amount < purchase.total_amount else 'full',
+                status='pending'
+            )
+            purchase.payment = payment
+            purchase.save()
+        
+        # Send email to admin
+        admin_email = User.objects.filter(is_superuser=True).first().email
+        subject = f'Payment Request for Purchase #{purchase.id}'
+        message = f"""
+        Vendor {vendor.business_name} has requested payment for purchase #{purchase.id}
+        
+        Product: {purchase.product_name}
+        Quantity: {purchase.quantity}
+        Requested Amount: ₹{requested_amount}
+        Total Amount: ₹{purchase.total_amount}
+        Already Paid: ₹{payment.amount_paid}
+        Remaining Amount: ₹{payment.remaining_amount}
+        
+        Additional Notes: {notes}
+        
+        Please review this request in the admin panel.
+        """
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [admin_email])
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Payment request sent successfully',
+            'total_amount': float(purchase.total_amount),
+            'paid_amount': float(payment.amount_paid),
+            'remaining_amount': float(payment.remaining_amount),
+            'requested_amount': float(requested_amount)
+        })
+        
+    except (Vendor.DoesNotExist, VendorPurchase.DoesNotExist):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Purchase request not found'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+@require_POST
+def vendor_update_purchase_status(request, purchase_id):
+    """Handle purchase request status updates"""
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return JsonResponse({'status': 'error', 'message': 'Please login as a vendor to continue'}, status=401)
+    
+    try:
+        vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])
+        purchase = VendorPurchase.objects.get(id=purchase_id, vendor=vendor)
+        
+        data = json.loads(request.body)
+        new_status = data['status']
+        
+        if not new_status or new_status not in ['accepted', 'rejected']:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid status'
+            })
+        
+        purchase.status = new_status
+        
+        # If accepting the request, send email to admin
+        if new_status == 'accepted':
+            # Get admin email from Tbl_login
+            admin_login = Tbl_login.objects.filter(email__icontains='admin').first()
+            if admin_login:
+                subject = f'Purchase Request #{purchase.id} Accepted'
+                message = f"""
+                Vendor {vendor.business_name} has accepted purchase request #{purchase.id}
+                
+                Product: {purchase.product_name}
+                Quantity: {purchase.quantity}
+                Total Amount: ₹{purchase.total_amount}
+                Expected Delivery: {purchase.expected_arrival}
+                
+                Please review in the admin panel.
+                """
+                try:
+                    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [admin_login.email])
+                except Exception as e:
+                    print(f"Error sending email: {e}")
+        
+        purchase.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Purchase request {new_status} successfully'
+        })
+        
+    except (Vendor.DoesNotExist, VendorPurchase.DoesNotExist) as e:
+        print(f"Error: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Purchase request not found'
+        }, status=404)
+    except json.JSONDecodeError as e:
+        print(f"JSON Error: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@decorator_from_middleware(CacheMiddleware)
+def admin_purchase_requests(request):
+    """View for displaying all purchase requests and their statuses"""
+    if 'login_id' not in request.session or request.session.get('user_type') != 'admin':
+        messages.error(request, 'Please login as admin to continue')
+        return redirect('login')
+    
+    try:
+        # Get all purchase requests
+        purchases = VendorPurchase.objects.all().select_related(
+            'vendor'
+        ).prefetch_related(
+            'datechangerequest_set'
+        ).order_by('-purchase_date')
+        
+        # Attach date change request info to each purchase
+        for purchase in purchases:
+            date_change_request = purchase.datechangerequest_set.filter(
+                status='pending'
+            ).first()
+            purchase.date_change_request = date_change_request
+        
+        context = {
+            'purchases': purchases
+        }
+        
+        return render(request, 'admin/purchase_requests.html', context)
+        
+    except Exception as e:
+        print("Error in admin_purchase_requests:", str(e))
+        messages.error(request, 'An error occurred while fetching purchase requests')
+        return redirect('adminhome')
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def update_purchase_status(request, purchase_id):
+    if not request.session.get('login_id') or request.session.get('user_type') != 'admin':
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        new_status = data.get('status')
+        
+        if new_status not in ['accepted', 'rejected']:
+            return JsonResponse({'success': False, 'message': 'Invalid status'}, status=400)
+        
+        purchase = VendorPurchase.objects.get(id=purchase_id)
+        purchase.status = new_status
+        
+        # If there was a pending date change request, update its status
+        date_change_request = DateChangeRequest.objects.filter(
+            purchase=purchase,
+            status='pending'
+        ).first()
+        
+        if date_change_request:
+            if new_status == 'accepted':
+                date_change_request.status = 'approved'
+                purchase.expected_arrival = date_change_request.requested_date
+            else:
+                date_change_request.status = 'rejected'
+            date_change_request.save()
+            
+            # Reset the date update request flag
+            purchase.has_date_update_request = False
+            purchase.requested_arrival_date = None
+        
+        purchase.save()
+        return JsonResponse({'success': True})
+        
+    except VendorPurchase.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Purchase not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def update_date_change_request(request, purchase_id):
+    if not request.session.get('login_id') or request.session.get('user_type') != 'admin':
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        action = data.get('action')
+        
+        if action not in ['approve', 'reject']:
+            return JsonResponse({'success': False, 'message': 'Invalid action'}, status=400)
+        
+        purchase = VendorPurchase.objects.get(id=purchase_id)
+        date_change_request = DateChangeRequest.objects.filter(
+            purchase=purchase,
+            status='pending'
+        ).first()
+        
+        if not date_change_request:
+            return JsonResponse({'success': False, 'message': 'No pending date change request found'}, status=404)
+        
+        if action == 'approve':
+            date_change_request.status = 'approved'
+            purchase.expected_arrival = date_change_request.requested_date
+        else:
+            date_change_request.status = 'rejected'
+        
+        date_change_request.save()
+        purchase.has_date_update_request = False
+        purchase.requested_arrival_date = None
+        purchase.save()
+        
+        return JsonResponse({'success': True})
+        
+    except VendorPurchase.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'No pending date change request found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@require_POST
+def process_payment(request, purchase_id):
+    """Initial view to process payment and create payment record"""
+    if not request.session.get('login_id') or request.session.get('user_type') != 'admin':
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    
+    try:
+        purchase = VendorPurchase.objects.get(id=purchase_id)
+        
+        if purchase.status != 'accepted':
+            return JsonResponse({
+                'success': False,
+                'message': 'Cannot process payment for non-accepted purchase'
+            })
+        
+        if purchase.payment_processed:
+            return JsonResponse({
+                'success': False,
+                'message': 'Payment has already been processed'
+            })
+        
+        # Create payment record
+        payment = VendorPayment.objects.create(
+            vendor=purchase.vendor,
+            amount=purchase.total_amount,
+            amount_paid=0,  # Initially no amount is paid
+            product_name=purchase.product_name,
+            quantity=purchase.quantity,
+            payment_purpose='purchase',
+            payment_type='post',
+            status='pending'
+        )
+        
+        # Link payment to purchase
+        purchase.payment = payment
+        purchase.payment_processed = True
+        purchase.save()
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def get_purchase_details(request, purchase_id):
+    """Get purchase details for payment modal"""
+    if not request.session.get('login_id') or request.session.get('user_type') != 'admin':
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    
+    try:
+        purchase = VendorPurchase.objects.get(id=purchase_id)
+        # Format the response properly
+        response_data = {
+            'success': True,
+            'purchase': {
+                'id': purchase.id,
+                'total_amount': float(purchase.total_amount),  # Convert Decimal to float
+                'vendor_name': purchase.vendor.business_name,
+                'product_name': purchase.product_name
+            }
+        }
+        return JsonResponse(response_data, safe=False)
+    except VendorPurchase.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Purchase not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@require_POST
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def process_cod_payment(request, purchase_id):
+    """Handle COD payment option"""
+    if not request.session.get('login_id') or request.session.get('user_type') != 'admin':
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    
+    try:
+        purchase = VendorPurchase.objects.get(id=purchase_id)
+        
+        # Create payment record for COD
+        payment = VendorPayment.objects.create(
+            vendor=purchase.vendor,
+            amount=purchase.total_amount,
+            amount_paid=0,  # No payment made yet
+            product_name=purchase.product_name,
+            quantity=purchase.quantity,
+            payment_purpose='purchase',
+            payment_type='post',  # Post delivery payment
+            status='pending'
+        )
+        
+        # Update purchase record
+        purchase.payment = payment
+        purchase.payment_processed = True
+        purchase.save()
+        
+        return JsonResponse({'success': True})
+        
+    except VendorPurchase.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Purchase not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@require_POST
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def create_razorpay_order(request, purchase_id):
+    """Create Razorpay order for online payment"""
+    if not request.session.get('login_id') or request.session.get('user_type') != 'admin':
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        payment_method = data.get('payment_method')
+        purchase = VendorPurchase.objects.get(id=purchase_id)
+        
+        # Calculate the correct amount based on payment method
+        total_amount = float(purchase.total_amount)
+        amount_to_pay = total_amount if payment_method == 'full' else total_amount / 2
+        
+        # Convert to paise (Razorpay expects amount in paise)
+        amount_in_paise = int(amount_to_pay * 100)
+        
+        # Create Razorpay order
+        razorpay_order = razorpay_client.order.create({
+            'amount': amount_in_paise,
+            'currency': 'INR',
+            'payment_capture': '1'
+        })
+        
+        return JsonResponse({
+            'success': True,
+            'razorpay_key': settings.RAZORPAY_KEY_ID,
+            'order_id': razorpay_order['id'],
+            'amount': amount_in_paise,
+            'vendor_name': purchase.vendor.business_name,
+            'vendor_email': purchase.vendor.email
+        })
+        
+    except VendorPurchase.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Purchase not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+@require_POST
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def verify_payment(request, purchase_id):
+    """Verify Razorpay payment and update records"""
+    if not request.session.get('login_id') or request.session.get('user_type') != 'admin':
+        return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        payment_method = data.get('payment_method')
+        
+        purchase = VendorPurchase.objects.get(id=purchase_id)
+        
+        # Verify Razorpay signature
+        params_dict = {
+            'razorpay_payment_id': data.get('razorpay_payment_id'),
+            'razorpay_order_id': data.get('razorpay_order_id'),
+            'razorpay_signature': data.get('razorpay_signature')
+        }
+        
+        razorpay_client.utility.verify_payment_signature(params_dict)
+        
+        if payment_method == 'remaining':
+            # Update existing payment record for remaining payment
+            if not purchase.payment or purchase.payment.payment_type != 'advance':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid payment state for remaining payment'
+                })
+            
+            payment = purchase.payment
+            payment.amount_paid = purchase.total_amount  # Update to full amount
+            payment.payment_type = 'full'  # Change type to full
+            payment.status = 'completed'  # Mark as completed
+            payment.save()
+        else:
+            # Create new payment record
+            payment = VendorPayment.objects.create(
+                vendor=purchase.vendor,
+                payment_id=data.get('razorpay_payment_id'),
+                amount=purchase.total_amount,
+                amount_paid=purchase.total_amount if payment_method == 'full' else purchase.total_amount / 2,
+                product_name=purchase.product_name,
+                quantity=purchase.quantity,
+                payment_purpose='purchase',
+                payment_type='advance' if payment_method == 'advance' else 'full',
+                status='completed' if payment_method == 'full' else 'partial_paid'
+            )
+            
+            # Update purchase record
+            purchase.payment = payment
+            purchase.payment_processed = True
+            purchase.save()
+        
+        return JsonResponse({'success': True})
+        
+    except VendorPurchase.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Purchase not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})

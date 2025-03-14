@@ -1,0 +1,436 @@
+{% extends 'admin/navbar.html' %}
+{% load custom_filters %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    // Make handlePaymentRequest globally available
+    window.handlePaymentRequest = function(purchaseId) {
+        // Fetch purchase details
+        fetch(`/adminhome/get-purchase-details/${purchaseId}/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Response data:', data);  // Debug log
+            if (data.success) {
+                currentPurchaseDetails = data.purchase;
+                // Update the modal with purchase details
+                document.getElementById('totalAmount').textContent = data.purchase.total_amount.toFixed(2);
+                // Show the modal using jQuery
+                $('#paymentMethodModal').modal('show');
+            } else {
+                alert(data.message || 'Failed to fetch purchase details');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to fetch purchase details');
+        });
+    };
+
+    let currentPurchaseDetails = null;
+
+    function handleRemainingPayment(purchaseId) {
+        // Fetch purchase details
+        fetch(`/adminhome/get-purchase-details/${purchaseId}/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentPurchaseDetails = data.purchase;
+                // Calculate remaining amount (50% of total)
+                const remainingAmount = (data.purchase.total_amount / 2).toFixed(2);
+                document.getElementById('remainingAmount').textContent = remainingAmount;
+                $('#remainingPaymentModal').modal('show');
+            } else {
+                alert(data.message || 'Failed to fetch purchase details');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to fetch purchase details');
+        });
+    }
+
+    // Add event listener for the proceed button
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('proceedPaymentBtn').addEventListener('click', function() {
+            const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
+            if (!selectedMethod) {
+                alert('Please select a payment method');
+                return;
+            }
+
+            const paymentMethod = selectedMethod.value;
+            const purchaseId = currentPurchaseDetails.id;
+            const totalAmount = parseFloat(currentPurchaseDetails.total_amount);
+
+            if (paymentMethod === 'cod') {
+                processCODPayment(purchaseId);
+            } else {
+                const amount = paymentMethod === 'full' ? totalAmount : totalAmount / 2;
+                initiateRazorpayPayment(purchaseId, amount, paymentMethod);
+            }
+        });
+
+        document.getElementById('processRemainingPaymentBtn').addEventListener('click', function() {
+            const purchaseId = currentPurchaseDetails.id;
+            const remainingAmount = currentPurchaseDetails.total_amount / 2;
+            initiateRazorpayPayment(purchaseId, remainingAmount, 'remaining');
+            $('#remainingPaymentModal').modal('hide');
+        });
+    });
+
+    function processCODPayment(purchaseId) {
+        fetch(`/adminhome/process-cod-payment/${purchaseId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                $('#paymentMethodModal').modal('hide');
+                location.reload();
+            } else {
+                alert(data.message || 'Failed to process COD payment');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to process COD payment');
+        });
+    }
+
+    function initiateRazorpayPayment(purchaseId, amount, paymentMethod) {
+        // Convert amount to a number and ensure it's properly formatted
+        const paymentAmount = parseFloat(amount).toFixed(2);
+        
+        fetch(`/adminhome/create-razorpay-order/${purchaseId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                amount: paymentAmount,
+                payment_method: paymentMethod
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const options = {
+                    key: data.razorpay_key,
+                    amount: data.amount,  // This will be in paise
+                    currency: "INR",
+                    name: "Jewelry Shop",
+                    description: paymentMethod === 'remaining' ? 
+                        `Remaining Payment for Purchase #${purchaseId}` : 
+                        `Payment for Purchase #${purchaseId}`,
+                    order_id: data.order_id,
+                    image: "https://example.com/image/rzp.jpg",
+                    prefill: {
+                        name: data.vendor_name,
+                        email: data.vendor_email,
+                        contact: "9072613031"
+                    },
+                    handler: function (response) {
+                        verifyPayment(response, purchaseId, paymentMethod);
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            if (confirm("Are you sure you want to close the form?")) {
+                                console.log("Checkout form closed by the user");
+                            } else {
+                                console.log("Complete the Payment");
+                            }
+                        }
+                    }
+                };
+                const rzp = new Razorpay(options);
+                rzp.open();
+            } else {
+                alert(data.message || 'Failed to create payment order');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to initiate payment');
+        });
+    }
+
+    function verifyPayment(response, purchaseId, paymentMethod) {
+        fetch(`/adminhome/verify-payment/${purchaseId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                payment_method: paymentMethod
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                $('#paymentMethodModal').modal('hide');
+                location.reload();
+            } else {
+                alert(data.message || 'Payment verification failed');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Payment verification failed');
+        });
+    }
+
+    function handleDateChangeRequest(purchaseId, action) {
+        if (!confirm(`Are you sure you want to ${action} this date change request?`)) {
+            return;
+        }
+        
+        const csrftoken = getCookie('csrftoken');
+        fetch(`/adminhome/update-date-change/${purchaseId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ action: action })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || 'An error occurred');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while processing your request');
+        });
+    }
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">Purchase Requests</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Vendor</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Total Amount</th>
+                            <th>Expected Arrival</th>
+                            <th>Status</th>
+                            <th>Payment Status</th>
+                            <th>Date Change Request</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for purchase in purchases %}
+                        <tr>
+                            <td>{{ purchase.vendor.business_name }}</td>
+                            <td>{{ purchase.product_name }}</td>
+                            <td>{{ purchase.quantity }}</td>
+                            <td>₹{{ purchase.total_amount }}</td>
+                            <td>{{ purchase.expected_arrival|date:"d M Y" }}</td>
+                            <td>
+                                <span class="badge {% if purchase.status == 'pending' %}badge-warning
+                                    {% elif purchase.status == 'accepted' %}badge-success
+                                    {% elif purchase.status == 'rejected' %}badge-danger
+                                    {% endif %}">
+                                    {{ purchase.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if purchase.payment %}
+                                    {% if purchase.payment.payment_type == 'advance' %}
+                                        <div class="text-info">
+                                            <strong>Advance Payment</strong><br>
+                                            <small>Paid: ₹{{ purchase.payment.amount_paid }}</small><br>
+                                            <small>Remaining: ₹{% with remaining=purchase.total_amount|sub:purchase.payment.amount_paid %}{{ remaining|default:0|floatformat:2 }}{% endwith %}</small>
+                                        </div>
+                                    {% elif purchase.payment.payment_type == 'full' %}
+                                        <div class="text-success">
+                                            <strong>Full Payment Complete</strong><br>
+                                            <small>Paid: ₹{{ purchase.payment.amount_paid|floatformat:2 }}</small>
+                                        </div>
+                                    {% elif purchase.payment.payment_type == 'post' %}
+                                        <div class="text-warning">
+                                            <strong>Cash on Delivery</strong><br>
+                                            <small>Amount Due: ₹{{ purchase.total_amount|floatformat:2 }}</small>
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">No payment processed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if purchase.has_date_update_request %}
+                                    <div class="text-warning">
+                                        <i class="fas fa-clock"></i> Date Change Requested
+                                        {% if purchase.date_change_request %}
+                                            <br>
+                                            <small>New Date: {{ purchase.date_change_request.requested_date|date:"d M Y" }}</small>
+                                            <br>
+                                            <small>Reason: {{ purchase.date_change_request.reason }}</small>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">No pending requests</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if purchase.has_date_update_request %}
+                                    <button class="btn btn-success btn-sm" onclick="handleDateChangeRequest('{{ purchase.pk }}', 'approve')">
+                                        Approve Date Change
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="handleDateChangeRequest('{{ purchase.pk }}', 'reject')">
+                                        Reject Date Change
+                                    </button>
+                                {% endif %}
+                                
+                                {% if purchase.status == 'accepted' %}
+                                    {% if not purchase.payment_processed %}
+                                        <button class="btn btn-primary btn-sm" onclick="handlePaymentRequest('{{ purchase.pk }}')">
+                                            Process Payment
+                                        </button>
+                                    {% elif purchase.payment.payment_type == 'advance' and purchase.payment.status == 'partial_paid' %}
+                                        <button class="btn btn-warning btn-sm" onclick="handleRemainingPayment('{{ purchase.pk }}')">
+                                            Pay Remaining Amount
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center">No purchase requests found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Method Modal -->
+<div class="modal fade" id="paymentMethodModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Payment Method</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="payment-info mb-3">
+                    <h6>Purchase Details:</h6>
+                    <p>Total Amount: ₹<span id="totalAmount">0</span></p>
+                </div>
+                <div class="payment-methods">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="paymentMethod" id="fullPayment" value="full">
+                        <label class="form-check-label" for="fullPayment">
+                            Full Payment (Online)
+                        </label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="paymentMethod" id="advancePayment" value="advance">
+                        <label class="form-check-label" for="advancePayment">
+                            Advance Payment (50% Online)
+                        </label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="paymentMethod" id="cod" value="cod">
+                        <label class="form-check-label" for="cod">
+                            Cash on Delivery
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="proceedPaymentBtn">Proceed</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remaining Payment Modal -->
+<div class="modal fade" id="remainingPaymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Process Remaining Payment</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="payment-info mb-3">
+                    <h6>Payment Details:</h6>
+                    <p>Remaining Amount: ₹<span id="remainingAmount">0</span></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="processRemainingPaymentBtn">Pay Now</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %} 

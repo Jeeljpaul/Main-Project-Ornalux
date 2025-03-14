@@ -1,2 +1,5 @@
 #Secret
 .env
+media/
+__pycache__/
+jewelryapp/ai_models/trained_model.keras
