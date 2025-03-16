@@ -586,10 +586,10 @@
                     <label for="imageInput">
                         <img src="https://cdn-icons-png.flaticon.com/512/3342/3342137.png" alt="Upload Image">
                     </label>
-                    <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)">
+                    <input type="file" id="imageUpload" accept="image/*" onchange="handleImageUpload(event)">
                 </div>
-                <input type="text" class="message-input" placeholder="Type your message...">
-                <button onclick="sendMessage()">Send</button>
+                <input type="text" id ="chatInput" class="message-input" placeholder="Type your message...">
+                <button onclick="sendMessage()" id ="sendButton">Send</button>
             </div>
         </div>
     </div>
