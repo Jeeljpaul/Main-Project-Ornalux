@@ -107,6 +107,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import cache_control
 import json
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 # Initialize Razorpay client
 razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
@@ -117,14 +119,8 @@ def index(request):
 def base(request):
     return render(request, 'base.html')
 
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.utils import timezone
-from .models import Tbl_login, Tbl_user
-from django.core.exceptions import ValidationError
-from django.db import transaction
-import datetime
-
+@ensure_csrf_cookie
+@require_http_methods(["GET", "POST"])
 def register(request):
     if request.method == 'POST':
         name = request.POST.get('name', '')
@@ -208,9 +204,7 @@ def register(request):
         except Exception as e:
             return JsonResponse({
                 'success': False,
-                'errors': {
-                    'server': [f'An error occurred while creating your account: {str(e)}']
-                }
+                'errors': {'server': [f'An error occurred while creating your account: {str(e)}']}
             }, status=500)
 
     # GET request - render the registration form
