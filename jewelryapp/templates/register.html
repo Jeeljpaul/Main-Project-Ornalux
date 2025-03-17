@@ -1,197 +1,428 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ornalux - Create Account</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Istok Web', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-            background-color: #D2B0A7;
-        }
+{% extends 'user/trial.html' %}
+{% load static %}
 
+{% block title %}Ornalux - Create Account{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Istok Web', sans-serif;
+        min-height: calc(100vh - 70px);
+        background-color: #D2B0A7;
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+
+    .container {
+        width: 90%;
+        max-width: 800px;
+        background: #E2CAC6;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        margin: 0 auto;
+    }
+
+    .title {
+        font-family: 'Italianno', cursive;
+        font-size: 48px;
+        color: #111010;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        font-size: 28px;
+        color: #000000;
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .form-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: space-between;
+    }
+
+    .form-group {
+        flex: 0 0 48%;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        font-size: 18px;
+        color: #5F7C8D;
+        margin-bottom: 5px;
+    }
+
+    .form-group input {
+        height: 40px;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 10px;
+        background: #EBB9B9;
+        font-size: 16px;
+    }
+
+    .submit-button {
+        width: 150px;
+        height: 40px;
+        background: #000000;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px auto 0;
+        transition: background-color 0.3s ease;
+    }
+
+    .submit-button:hover {
+        background-color: #333;
+    }
+
+    .submit-button span {
+        font-size: 18px;
+        color: #FFFFFF;
+        text-align: center;
+    }
+
+    .error-message {
+        color: red;
+        font-size: 14px;
+        margin: 5px 0;
+    }
+
+    #error-messages {
+        text-align: center;
+        margin-top: 15px;
+    }
+
+    @media (max-width: 768px) {
         .container {
-            width: 90%;
-            max-width: 800px;
-            background: #E2CAC6;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .title {
-            font-family: 'Italianno', cursive;
-            font-size: 48px;
-            color: #111010;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            font-size: 28px;
-            color: #000000;
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .form-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: space-between;
+            width: 95%;
+            padding: 20px;
         }
 
         .form-group {
-            flex: 0 0 48%;
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 20px;
+            flex: 0 0 100%;
         }
 
-        .form-group label {
-            font-size: 18px;
-            color: #5F7C8D;
-            margin-bottom: 5px;
+        .title {
+            font-size: 36px;
         }
 
-        .form-group input {
-            height: 40px;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 10px;
-            background: #EBB9B9;
-            font-size: 16px;
+        .subtitle {
+            font-size: 24px;
         }
+    }
 
-        .submit-button {
-            width: 150px;
-            height: 40px;
-            background: #000000;
-            border-radius: 20px;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 20px auto 0;
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-content {
+        background: #E2CAC6;
+        padding: 30px;
+        border-radius: 15px;
+        max-width: 400px;
+        width: 90%;
+        position: relative;
+        animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            transform: translateY(-100px);
+            opacity: 0;
         }
-
-        .submit-button span {
-            font-size: 18px;
-            color: #FFFFFF;
-            text-align: center;
+        to {
+            transform: translateY(0);
+            opacity: 1;
         }
+    }
 
-        .error-message {
-            color: red;
-            font-size: 14px;
+    .modal-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .modal-title {
+        font-size: 24px;
+        color: #111010;
+        margin: 0;
+    }
+
+    .modal-body {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .modal-message {
+        font-size: 16px;
+        line-height: 1.5;
+        color: #333;
+    }
+
+    .modal-footer {
+        text-align: center;
+    }
+
+    .modal-btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+
+    .modal-btn.success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .modal-btn.error {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .modal-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+
+    .modal-icon.success {
+        color: #28a745;
+    }
+
+    .modal-icon.error {
+        color: #dc3545;
+    }
+
+    /* Add this to your existing media queries */
+    @media (max-width: 768px) {
+        .modal-content {
+            width: 95%;
+            padding: 20px;
         }
-    </style>
-    <script>
-        function validateForm() {
-            let name = document.getElementById("name").value;
-            let dob = document.getElementById("dob").value;
-            let phone = document.getElementById("phone").value;
-            let email = document.getElementById("email").value;
-            let password = document.getElementById("password").value;
-            let confirmPassword = document.getElementById("confirm_password").value;
-            let currentDate = new Date();
-            let dobDate = new Date(dob);
-            let age = currentDate.getFullYear() - dobDate.getFullYear();
-            let errors = [];
+    }
+</style>
 
-            // Name validation - only letters and spaces
-            if (!/^[a-zA-Z\s]+$/.test(name)) {
-                errors.push("Name should only contain letters.");
-            }
+<!-- Add the modal HTML right after your container div -->
+<div id="messageModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div id="modalIcon" class="modal-icon">
+                <!-- Icon will be inserted here by JavaScript -->
+            </div>
+            <h3 id="modalTitle" class="modal-title"></h3>
+        </div>
+        <div class="modal-body">
+            <p id="modalMessage" class="modal-message"></p>
+        </div>
+        <div class="modal-footer">
+            <button id="modalButton" class="modal-btn" onclick="closeModal()"></button>
+        </div>
+    </div>
+</div>
 
-            // Date of birth validation - age 18+
-            if (age < 18 || dobDate >= currentDate) {
-                errors.push("You must be at least 18 years old.");
-            }
-
-            // Phone number validation - 10 digits
-            if (!/^\d{10}$/.test(phone)) {
-                errors.push("Phone number must be exactly 10 digits.");
-            }
-
-            // Email validation - basic email pattern
-            let emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailPattern.test(email)) {
-                errors.push("Please enter a valid email address.");
-            }
-
-            // Password validation - at least 8 characters, 1 letter, 1 number, and 1 special character
-            let passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
-            if (!passwordPattern.test(password)) {
-                errors.push("Password must be at least 8 characters long, include a letter, a number, and a special character.");
-            }
-
-            // Confirm password validation - match with password
-            if (password !== confirmPassword) {
-                errors.push("Passwords do not match.");
-            }
-
-            // Display errors
-            let errorContainer = document.getElementById("error-messages");
-            errorContainer.innerHTML = ""; // Clear previous errors
-            if (errors.length > 0) {
-                errors.forEach(function (error) {
-                    let errorElement = document.createElement("p");
-                    errorElement.classList.add("error-message");
-                    errorElement.textContent = error;
-                    errorContainer.appendChild(errorElement);
-                });
-                return false; // Prevent form submission
-            }
-            return true; // Allow form submission
-        }
-    </script>
-</head>
-<body>
-    <div class="container">
-        <div class="title">ORNALUX</div>
-        <div class="subtitle">Create Account</div>
-        
-        <form method="POST" action="/register/" onsubmit="return validateForm()">
-            {% csrf_token %}
-            <div class="form-container">
-                <div class="form-group">
-                    <input type="text" id="name" name="name" placeholder="Enter Your Name" value="{{ form.name.value|default_if_none:'' }}">
-                </div>
-
-                <div class="form-group">
-                    <input type="date" id="dob" name="dob" value="{{ form.dob.value|default_if_none:'' }}">
-                </div>
-
-                <div class="form-group">
-                    <input type="text" id="phone" name="phone" placeholder="Enter Your Phone Number" value="{{ form.phone.value|default_if_none:'' }}">
-                </div>
-
-                <div class="form-group">
-                    <input type="email" id="email" name="email" placeholder="Enter Your Email" value="{{ form.email.value|default_if_none:'' }}">
-                </div>
-
-                <div class="form-group">
-                    <input type="password" id="password" name="password" placeholder="Enter Your Password" value="{{ form.password.value|default_if_none:'' }}">
-                </div>
-
-                <div class="form-group">
-                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password">
-                </div>
+<div class="container">
+    <div class="title">ORNALUX</div>
+    <div class="subtitle">Create Account</div>
+    
+    <form method="POST" action="/register/" onsubmit="return validateForm()">
+        {% csrf_token %}
+        <div class="form-container">
+            <div class="form-group">
+                <input type="text" id="name" name="name" placeholder="Enter Your Name" value="{{ form.name.value|default_if_none:'' }}">
             </div>
 
-            <div id="error-messages"></div>
+            <div class="form-group">
+                <input type="date" id="dob" name="dob" value="{{ form.dob.value|default_if_none:'' }}">
+            </div>
 
-            <button type="submit" class="submit-button">
-                <span>Sign Up</span> 
-            </button>
-        </form>
-    </div>
-</body>
-</html>
+            <div class="form-group">
+                <input type="text" id="phone" name="phone" placeholder="Enter Your Phone Number" value="{{ form.phone.value|default_if_none:'' }}">
+            </div>
+
+            <div class="form-group">
+                <input type="email" id="email" name="email" placeholder="Enter Your Email" value="{{ form.email.value|default_if_none:'' }}">
+            </div>
+
+            <div class="form-group">
+                <input type="password" id="password" name="password" placeholder="Enter Your Password" value="{{ form.password.value|default_if_none:'' }}">
+            </div>
+
+            <div class="form-group">
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password">
+            </div>
+        </div>
+
+        <div id="error-messages"></div>
+
+        <button type="submit" class="submit-button">
+            <span>Sign Up</span> 
+        </button>
+    </form>
+</div>
+
+<script>
+    // Function to show modal with message
+    function showModal(type, title, message) {
+        const modal = document.getElementById('messageModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalButton = document.getElementById('modalButton');
+        const modalIcon = document.getElementById('modalIcon');
+
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+
+        if (type === 'success') {
+            modalIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+            modalIcon.className = 'modal-icon success';
+            modalButton.className = 'modal-btn success';
+            modalButton.textContent = 'Continue';
+            // Redirect to login page after 2 seconds on success
+            setTimeout(() => {
+                window.location.href = '/login/';
+            }, 2000);
+        } else {
+            modalIcon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+            modalIcon.className = 'modal-icon error';
+            modalButton.className = 'modal-btn error';
+            modalButton.textContent = 'Try Again';
+        }
+
+        modal.style.display = 'flex';
+    }
+
+    // Function to close modal
+    function closeModal() {
+        const modal = document.getElementById('messageModal');
+        modal.style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('messageModal');
+        if (event.target === modal) {
+            closeModal();
+        }
+    }
+
+    // Modified validateForm function
+    function validateForm() {
+        let name = document.getElementById("name").value;
+        let dob = document.getElementById("dob").value;
+        let phone = document.getElementById("phone").value;
+        let email = document.getElementById("email").value;
+        let password = document.getElementById("password").value;
+        let confirmPassword = document.getElementById("confirm_password").value;
+        let currentDate = new Date();
+        let dobDate = new Date(dob);
+        let age = currentDate.getFullYear() - dobDate.getFullYear();
+        let errors = [];
+
+        // Name validation - only letters and spaces
+        if (!/^[a-zA-Z\s]+$/.test(name)) {
+            errors.push("Name should only contain letters.");
+        }
+
+        // Date of birth validation - age 18+
+        if (age < 18 || dobDate >= currentDate) {
+            errors.push("You must be at least 18 years old.");
+        }
+
+        // Phone number validation - 10 digits
+        if (!/^\d{10}$/.test(phone)) {
+            errors.push("Phone number must be exactly 10 digits.");
+        }
+
+        // Email validation - basic email pattern
+        let emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(email)) {
+            errors.push("Please enter a valid email address.");
+        }
+
+        // Password validation - at least 8 characters, 1 letter, 1 number, and 1 special character
+        let passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+        if (!passwordPattern.test(password)) {
+            errors.push("Password must be at least 8 characters long, include a letter, a number, and a special character.");
+        }
+
+        // Confirm password validation - match with password
+        if (password !== confirmPassword) {
+            errors.push("Passwords do not match.");
+        }
+
+        // Display errors
+        let errorContainer = document.getElementById("error-messages");
+        errorContainer.innerHTML = ""; // Clear previous errors
+        if (errors.length > 0) {
+            errors.forEach(function (error) {
+                let errorElement = document.createElement("p");
+                errorElement.classList.add("error-message");
+                errorElement.textContent = error;
+                errorContainer.appendChild(errorElement);
+            });
+            showModal('error', 'Registration Error', errors.join('\n'));
+            return false; // Prevent form submission
+        }
+
+        // If validation passes, submit the form
+        const form = document.querySelector('form');
+        const formData = new FormData(form);
+
+        fetch('/register/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showModal('success', 'Registration Successful', 'Your account has been created successfully! Redirecting to login...');
+            } else {
+                showModal('error', 'Registration Error', data.message || 'An error occurred during registration.');
+            }
+        })
+        .catch(error => {
+            showModal('error', 'Registration Error', 'An error occurred during registration. Please try again.');
+        });
+
+        return false; // Prevent default form submission
+    }
+
+    // Add event listener for ESC key to close modal
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+</script>
+{% endblock content %}
