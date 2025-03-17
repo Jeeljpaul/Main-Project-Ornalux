@@ -1882,7 +1882,7 @@ def product_list(request):
 #     return render(request, 'user/all_products.html', context)
 # //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 from django.shortcuts import render
-from .models import Product, Category, Metaltype, Stonetype, CategoryAttribute
+from .models import Product, Category, Metaltype, Stonetype, CategoryAttribute, VendorProduct
 from .models import ProductAttribute
 import json
 from django.http import JsonResponse
@@ -1891,7 +1891,8 @@ from django.db.models import Q
 from nltk.corpus import wordnet
 from functools import reduce
 import operator
-
+from itertools import chain
+from django.db.models import Case, When, Value, BooleanField
 
 
 import nltk
@@ -1899,6 +1900,8 @@ nltk.download("wordnet")
 
 def all_products(request):
     products = Product.objects.filter(is_active=True)  # Fetch only active products
+
+
     
     # Get filter values from the request
     search_query = request.GET.get('search', '').strip()
@@ -1925,6 +1928,7 @@ def all_products(request):
             print(f"Filtering by category ID: {category_id}")
             products = products.filter(category_id=category_id)
 
+
             # Fetch category-specific attributes
             category_attributes = CategoryAttribute.objects.filter(category_id=category_id)
             
@@ -1937,6 +1941,7 @@ def all_products(request):
                         attributes__attribute_name=attribute.name,
                         attributes__attribute_value=attribute_value
                     )
+                    
         except ValueError:
             print("Invalid category ID passed.")
 
@@ -1944,9 +1949,11 @@ def all_products(request):
     if selected_metaltype:
         products = products.filter(metaltype_id__in=selected_metaltype)
 
+
     # Filter by stone type
     if selected_stonetype:
         products = products.filter(stonetype_id__in=selected_stonetype)
+
 
     # Filter by gender
     if selected_gender:
