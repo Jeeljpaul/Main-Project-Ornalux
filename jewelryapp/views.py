@@ -2043,6 +2043,11 @@ from .models import Product
 def detail(request, product_id):
     # Fetch product details
     product = get_object_or_404(Product, pk=product_id)
+    current_date = timezone.now()
+    end_of_day = current_date.replace(hour=23, minute=59, second=59)
+    remaining_time = end_of_day - current_date
+    remaining_hours = remaining_time.seconds // 3600
+    remaining_minutes = (remaining_time.seconds % 3600) // 60
 
     # API setup
     # api_key = 'goldapi-13te5osm64x6oty-io'
@@ -2080,11 +2085,17 @@ def detail(request, product_id):
                 metal_rates[metal] = "Unavailable"
         except Exception as e:
             metal_rates[metal] = "Error fetching rate"
+    
+    reviews = Review.objects.filter(product=product).order_by('-created_at')
 
     context = {
         'product': product,
         'metal_rates': metal_rates,
         'product_metal_rate': product_metal_rate,
+        'current_date': current_date,
+        'remaining_hours': remaining_hours,
+        'remaining_minutes': remaining_minutes,
+        'reviews': reviews,
     }
     return render(request, 'user/all_details.html', context)
 
@@ -6209,7 +6220,7 @@ def verify_payment(request, purchase_id):
                 vendor=purchase.vendor,
                 payment_id=data.get('razorpay_payment_id'),
                 amount=purchase.total_amount,
-                amount_paid=purchase.total_amount if payment_method == 'full' else purchase.total_amount / 2,
+                amount_paid=purchase.total_amount if payment_method ==  'full' else purchase.total_amount / 2,
                 product_name=purchase.product_name,
                 quantity=purchase.quantity,
                 payment_purpose='purchase',

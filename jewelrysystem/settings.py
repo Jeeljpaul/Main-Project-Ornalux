@@ -24,6 +24,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = ['https://miniproject-ornalux.onrender.com']
+
+CSRF_TRUSTED_ORIGINS = ['https://d8fc-117-193-79-225.ngrok-free.app']
+
 # Application definition
 
 INSTALLED_APPS = [
