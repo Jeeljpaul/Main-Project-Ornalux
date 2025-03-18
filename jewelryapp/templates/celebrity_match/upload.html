@@ -1,0 +1,220 @@
+
+{% block content %}
+<div class="celebrity-match-container">
+    <div class="upload-section">
+        <h2>Find Jewelry Worn by Celebrities</h2>
+        <p class="upload-description">Upload a photo of a celebrity wearing jewelry, and we'll find similar items in our store.</p>
+        
+        <div class="upload-card">
+            <div class="upload-icon">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            
+            <form method="post" enctype="multipart/form-data" class="upload-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    {{ form.image.label_tag }}
+                    {{ form.image }}
+                    {% if form.image.help_text %}
+                        <small class="form-text text-muted">{{ form.image.help_text }}</small>
+                    {% endif %}
+                </div>
+                
+                <button type="submit" class="upload-button">
+                    <i class="fas fa-search"></i> Find Matching Jewelry
+                </button>
+            </form>
+        </div>
+        
+        <div class="upload-tips">
+            <h3>Tips for best results:</h3>
+            <ul>
+                <li>Choose images with clearly visible jewelry</li>
+                <li>Close-up shots work better than full-body images</li>
+                <li>Good lighting helps our AI find better matches</li>
+                <li>High-resolution images yield more accurate results</li>
+            </ul>
+        </div>
+    </div>
+    
+    {% if messages %}
+    <div class="messages-container">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .celebrity-match-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px 20px;
+    }
+    
+    .upload-section {
+        text-align: center;
+    }
+    
+    .upload-section h2 {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 32px;
+    }
+    
+    .upload-description {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 18px;
+    }
+    
+    .upload-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+        transition: transform 0.3s ease;
+    }
+    
+    .upload-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .upload-icon {
+        font-size: 48px;
+        color: #4a90e2;
+        margin-bottom: 20px;
+    }
+    
+    .upload-form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+        width: 100%;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .form-group input[type="file"] {
+        width: 100%;
+        padding: 10px;
+        border: 2px dashed #ccc;
+        border-radius: 5px;
+        background: #f9f9f9;
+        transition: border 0.3s ease;
+    }
+    
+    .form-group input[type="file"]:hover {
+        border-color: #4a90e2;
+    }
+    
+    .upload-button {
+        background: #4a90e2;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 30px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 10px;
+    }
+    
+    .upload-button i {
+        margin-right: 8px;
+    }
+    
+    .upload-button:hover {
+        background: #3579cf;
+    }
+    
+    .upload-tips {
+        background: #f7f9fc;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 30px;
+        text-align: left;
+    }
+    
+    .upload-tips h3 {
+        color: #333;
+        margin-bottom: 15px;
+        font-size: 20px;
+    }
+    
+    .upload-tips ul {
+        padding-left: 20px;
+    }
+    
+    .upload-tips li {
+        margin-bottom: 10px;
+        color: #555;
+    }
+    
+    .messages-container {
+        margin-top: 20px;
+    }
+    
+    .alert {
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
+    
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    @media (max-width: 600px) {
+        .celebrity-match-container {
+            padding: 20px 10px;
+        }
+        
+        .upload-section h2 {
+            font-size: 24px;
+        }
+        
+        .upload-description {
+            font-size: 16px;
+        }
+        
+        .upload-card {
+            padding: 20px;
+        }
+        
+        .upload-button {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

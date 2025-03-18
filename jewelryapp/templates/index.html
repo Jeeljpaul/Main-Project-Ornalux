@@ -68,7 +68,7 @@
 						</a> -->
 
 						<a href="/login/" class="flex-c-m trans-04 p-lr-25">
-							Login
+							My Account
 						</a>
 
 						<a href="/register/" class="flex-c-m trans-04 p-lr-25">
@@ -138,13 +138,13 @@
 						</div> -->
 
 						<div>
-						<a href="{% url 'view_cart' %}" class="icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11" >
+						<a href="{% url 'view_cart' %}" class="icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11 icon-header-noti js-show-cart" >
 							<i class="zmdi zmdi-shopping-cart"></i>
 						</a>
 						</div>
 
 
-								<a href="{% url 'view_wishlist' %}" class="dis-block icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11" >
+								<a href="{% url 'view_wishlist' %}" class="dis-block icon-header-item cl2 hov-cl1 trans-04 p-l-22 p-r-11 icon-header-noti" >
 									<i class="zmdi zmdi-favorite-outline"></i>
 								</a>
 
@@ -575,7 +575,21 @@
 								Old gold exchange
 							</a>
 						</li>
+						<li class="p-b-10">
+							<a href="{% url 'recommend_jewelry' %}" class="stext-107 cl7 hov-cl1 trans-04">
+								Recommendation
+							</a>
+						</li>
 
+						
+
+
+						<li class="p-b-10">
+							<a href="{% url 'upload_celebrity_image' %}" class="stext-107 cl7 hov-cl1 trans-04">
+								Upload Celebrity Image
+							</a>
+						</li>
+						
 						<li class="p-b-10">
 							<a href="#" class="stext-107 cl7 hov-cl1 trans-04">
 								FAQs
