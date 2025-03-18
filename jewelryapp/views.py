@@ -806,6 +806,632 @@ def send_booking_status_email(booking):
         fail_silently=True
     )
 
+#staff views.py-------------------------------------------------------------------------------------------------
+
+# from django.shortcuts import render, redirect
+# from .models import Product
+# from .forms import ProductForm
+ 
+# def add_p(request):
+#     if request.method == "POST":
+#         form = ProductForm(request.POST, request.FILES)
+#         if form.is_valid():
+#             form.save()
+#             return redirect('product_list')  
+#     else:
+#         form = ProductForm()
+#     categories = Category.objects.all() 
+#     return render(request, 'admin/add_p.html', {'form': form, 'categories': categories})
+
+
+
+# def add_product(request):
+#     if request.method == "POST":
+#         form = ProductForm(request.POST, request.FILES)
+#         if form.is_valid():
+#             form.save()
+#             return redirect('product_list')  
+#     else:
+#         form = ProductForm()
+#     return render(request, 'admin/add_product.html', {'form': form})
+
+
+
+from django.shortcuts import render
+from .models import Product
+
+def product_list(request):
+    products = Product.objects.all()  # Fetch all products
+    return render(request, 'admin/product_list.html', {'products': products})
+
+
+
+# from django.shortcuts import get_object_or_404
+
+# def update_p(request, product_id):
+#     product = get_object_or_404(Product, pk=product_id)
+    
+#     if request.method == "POST":
+#         form = ProductForm(request.POST, request.FILES, instance=product)
+#         if form.is_valid():
+#             form.save()
+#             return redirect('product_list')  
+#     else:
+#         form = ProductForm(instance=product)
+
+#     return render(request, 'admin/update_p.html', {'form': form, 'product': product})
+
+
+# -----------------------------------------------------------------------------------------------------
+
+#userpage
+
+def product(request): 
+    return render(request, 'user/product.html')
+
+
+from django.shortcuts import render
+from .models import Product, Stonetype, Metaltype, Category
+from .models import ProductAttribute
+def ring_lists(request):
+    # Get all possible filter values from the database
+    ring_sizes = ProductAttribute.objects.filter(attribute_name='Ringsize').values_list('attribute_value', flat=True).distinct()
+    ring_types = ProductAttribute.objects.filter(attribute_name='Ringtype').values_list('attribute_value', flat=True).distinct()
+    gemstones = Stonetype.objects.all()
+    materials = Metaltype.objects.all()
+
+    # Retrieve selected filters from the request
+    selected_ring_sizes = request.GET.getlist('ring_size')
+    selected_ring_types = request.GET.getlist('ring_type')
+    selected_gemstones = request.GET.getlist('gemstone')
+    selected_materials = request.GET.getlist('metal_type')
+
+    # Initialize the queryset to fetch all ring products initially
+    category_ring = Category.objects.get(name='Ring')
+    rings = Product.objects.filter(category=category_ring, is_active=True)
+
+    # Apply filtering based on selected values
+    if selected_ring_sizes:
+        rings = rings.filter(attributes__attribute_name='Ringsize', attributes__attribute_value__in=selected_ring_sizes)
+    if selected_ring_types:
+        rings = rings.filter(attributes__attribute_name='Ringtype', attributes__attribute_value__in=selected_ring_types)
+    if selected_gemstones:
+        rings = rings.filter(stonetype__name__in=selected_gemstones)
+    if selected_materials:
+        rings = rings.filter(metaltype__name__in=selected_materials)
+
+    context = {
+        'rings': rings,
+        'ring_sizes': ring_sizes,
+        'ring_types': ring_types,
+        'gemstones': gemstones,
+        'materials': materials,
+        'selected_ring_sizes': selected_ring_sizes,
+        'selected_ring_types': selected_ring_types,
+        'selected_gemstones': selected_gemstones,
+        'selected_materials': selected_materials,
+    }
+
+    return render(request, 'user/ring_list.html', context)
+
+
+
+
+
+
+
+from django.shortcuts import render, get_object_or_404
+from .models import Product, Metaltype, Stonetype, Category
+from .models import ProductAttribute
+def ring_detail(request, product_id):
+    # Get the specific product by its ID, along with related Metaltype, Stonetype, and Category
+    product = get_object_or_404(Product.objects.select_related('metaltype', 'stonetype', 'category'), product_id=product_id)
+  
+
+    # Fetch the product's attributes (e.g., ring size, ring type, etc.)
+    product_attributes = ProductAttribute.objects.filter(product=product)
+
+    # Fetch the category attributes for the specific product category (if any)
+    category_attributes = product.category.attributes.all() if product.category else []
+
+    context = {
+        'product': product,
+        'product_attributes': product_attributes,
+        'category_attributes': category_attributes,
+        'metaltype': product.metaltype,
+        'stonetype': product.stonetype,
+    }
+
+    return render(request, 'user/ring_detail.html', context)
+
+
+def earring_list(request):
+    # Get all possible filter values from the database
+    gemstones = Stonetype.objects.all()
+    materials = Metaltype.objects.all()
+    earring_styles = ProductAttribute.objects.filter(attribute_name='Earring Style').values_list('attribute_value', flat=True).distinct()
+    shop_for_options = Product.objects.values_list('gender', flat=True).distinct()
+
+    # Retrieve selected filters from the request
+    selected_gemstones = request.GET.getlist('gemstone')
+    selected_materials = request.GET.getlist('metal_type')
+    selected_earring_styles = request.GET.getlist('earringstyle')
+    selected_shop_for = request.GET.getlist('shop_for')
+
+    # Initialize the queryset to fetch all products initially
+    category_earring = Category.objects.get(name='Earring')
+    earrings = Product.objects.filter(category=category_earring, is_active=True)
+
+
+    # Apply filtering based on selected values
+    if selected_shop_for:
+        earrings = earrings.filter(gender__in=selected_shop_for)
+    if selected_gemstones:
+        earrings = earrings.filter(stonetype__name__in=selected_gemstones)
+    if selected_materials:
+        earrings = earrings.filter(metaltype__name__in=selected_materials)
+    if selected_earring_styles:
+        earrings = earrings.filter(attributes_attribute_name='Earring Style', attributes__attribute_value__in=selected_earring_styles)
+
+    context = {
+        'earrings': earrings,
+        'gemstones': gemstones,
+        'materials': materials,
+        'earring_styles': earring_styles,
+        'shop_for_options': shop_for_options,
+        'selected_gemstones': selected_gemstones,
+        'selected_materials': selected_materials,
+        'selected_earring_styles': selected_earring_styles,
+        'selected_shop_for': selected_shop_for,
+    }
+
+    return render(request, 'user/earring_list.html', context)
+
+
+
+def earring_detail(request, product_id):
+    # Get the specific product by its ID, along with related Metaltype, Stonetype, and Category
+    product = get_object_or_404(Product.objects.select_related('metaltype', 'stonetype', 'category'), product_id=product_id)
+  
+
+    # Fetch the product's attributes (e.g., ring size, ring type, etc.)
+    product_attributes = ProductAttribute.objects.filter(product=product)
+
+    # Fetch the category attributes for the specific product category (if any)
+    category_attributes = product.category.attributes.all() if product.category else []
+
+    context = {
+        'product': product,
+        'product_attributes': product_attributes,
+        'category_attributes': category_attributes,
+        'metaltype': product.metaltype,
+        'stonetype': product.stonetype,
+    }
+
+    return render(request, 'user/earring_detail.html', context)
+
+
+def bracelet_lists(request):
+    # Get all possible filter values from the database
+    bracelet_styles = ProductAttribute.objects.filter(attribute_name='Bracelet Style').values_list('attribute_value', flat=True).distinct()
+    gemstones = Stonetype.objects.all()
+    materials = Metaltype.objects.all()
+    shop_for_options = Product.objects.values_list('gender', flat=True).distinct()
+
+    # Retrieve selected filters from the request
+    selected_styles = request.GET.getlist('bracelet_style')
+    selected_shop_for = request.GET.getlist('shop_for')
+    selected_gemstones = request.GET.getlist('gemstone')
+    selected_materials = request.GET.getlist('metal_type')
+
+    # Initialize the queryset to fetch all bracelet products initially
+    category_bracelet = Category.objects.get(name='Bracelets')
+    bracelets = Product.objects.filter(category=category_bracelet, is_active=True)
+
+    # Apply filtering based on selected values
+    if selected_styles:
+        bracelets = bracelets.filter(attributes__attribute_name='Bracelet Style', attributes__attribute_value__in=selected_styles)
+    if selected_shop_for:
+        bracelets = bracelets.filter(gender__in=selected_shop_for)
+    if selected_gemstones:
+        bracelets = bracelets.filter(stonetype__name__in=selected_gemstones)
+    if selected_materials:
+        bracelets = bracelets.filter(metaltype__name__in=selected_materials)
+
+    context = {
+        'bracelets': bracelets,
+        'bracelet_styles': bracelet_styles,
+        'shop_for_options': shop_for_options,
+        'gemstones': gemstones,
+        'materials': materials,
+        'selected_styles': selected_styles,
+        'selected_shop_for': selected_shop_for,
+        'selected_gemstones': selected_gemstones,
+        'selected_materials': selected_materials,
+    }
+
+    return render(request, 'user/bracelet.html', context)
+
+
+
+def bracelet_detail(request, product_id):
+    # Get the specific product by its ID, along with related Metaltype, Stonetype, and Category
+    product = get_object_or_404(Product.objects.select_related('metaltype', 'stonetype', 'category'), product_id=product_id)
+  
+
+    # Fetch the product's attributes (e.g., ring size, ring type, etc.)
+    product_attributes = ProductAttribute.objects.filter(product=product)
+
+    # Fetch the category attributes for the specific product category (if any)
+    category_attributes = product.category.attributes.all() if product.category else []
+
+    context = {
+        'product': product,
+        'product_attributes': product_attributes,
+        'category_attributes': category_attributes,
+        'metaltype': product.metaltype,
+        'stonetype': product.stonetype,
+    }
+
+    return render(request, 'user/bracelet_details.html', context)
+
+#----------------------------------------------------------------------------------------------------------------------------------------------
+
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from .models import Product, Cart, CartItem
+from .models import Tbl_user
+
+def add_to_cart(request, product_id):
+    if 'login_id' in request.session:
+        product = get_object_or_404(Product, product_id=product_id)
+        user_id = request.session['login_id']
+        print(user_id)
+        if request.method == 'POST':
+            # Check if the user is authenticated
+            # if request.user.is_authenticated:
+                # user = get_object_or_404(Tbl_user, user_id=user_id)
+                # print(user)
+                user_cart, created = Cart.objects.get_or_create(login=user_id)
+                print("kk")
+                # Check if the cart item already exists
+                cart_item, item_created = CartItem.objects.get_or_create(cart=user_cart, product=product)
+
+                if not item_created:
+                    # If the item is already in the cart, increase the quantity
+                    cart_item.quantity += 1
+                    cart_item.save()
+
+                return JsonResponse({'success': True, 'message': f'{product.product_name} added to cart successfully!'})
+            
+            # else:
+            #     # Handle cart for non-authenticated users using session
+            #     cart = request.session.get('cart', {})
+
+            #     # Check if the product is already in the cart
+            #     if str(product_id) in cart:
+            #         cart[str(product_id)]['quantity'] += 1
+            #     else:
+            #         cart[str(product_id)] = {
+            #             'product_id': product_id,
+            #             'product_name': product.product_name,
+            #             'quantity': 1,
+            #             'price': str(product.price)  # Convert to string for session compatibility
+            #         }
+
+            #     # Save the updated cart in the session
+            #     request.session['cart'] = cart
+            #     return JsonResponse({'success': True, 'message': f'{product.product_name} added to session cart successfully!'})
+
+        return JsonResponse({'success': False, 'message': 'Invalid request.'})
+    else:
+        return redirect('login')
+
+from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from .models import Cart, CartItem, Product
+
+def view_cart(request):
+    # Check if the user is logged in
+    if 'login_id' not in request.session:
+        return redirect('login')  # Redirect to login page if the user is not logged in
+
+    user_id = request.session['login_id']
+
+    # Fetch the user's cart using the login_id stored in the session
+    try:
+        user_cart = Cart.objects.get(login=user_id)
+        cart_items = CartItem.objects.filter(cart=user_cart, status=True).select_related('product')
+    except Cart.DoesNotExist:
+        # If the cart does not exist, initialize an empty list for cart items
+        cart_items = []
+
+    # Calculate the total price of all items in the cart
+    total_price = sum(item.product.price * item.quantity for item in cart_items)
+
+    context = {
+        'cart_items': cart_items,
+        'total_price': total_price,
+    }
+
+    return render(request, 'user/view_cart.html', context)
+
+
+def update_cart_quantity(request):
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        product_id = request.POST.get('product_id')
+        change = int(request.POST.get('change'))
+
+        try:
+            user_id = request.session['login_id']
+            user_cart = Cart.objects.get(login=user_id)
+            cart_item = CartItem.objects.get(cart=user_cart, product_id=product_id)
+
+            # Update the quantity
+            cart_item.quantity += change
+            if cart_item.quantity <= 0:
+                cart_item.delete()
+            else:
+                cart_item.save()
+
+            # Calculate the updated total price for the cart item and the cart
+            item_total_price = cart_item.product.price * cart_item.quantity
+            total_price = sum(item.product.price * item.quantity for item in CartItem.objects.filter(cart=user_cart))
+
+            return JsonResponse({
+                'new_quantity': cart_item.quantity,
+                'item_total_price': item_total_price,
+                'new_total_price': total_price,
+            })
+
+        except (Cart.DoesNotExist, CartItem.DoesNotExist):
+            return JsonResponse({'error': 'Cart or CartItem not found.'}, status=404)
+
+    return JsonResponse({'error': 'Invalid request.'}, status=400)
+
+
+
+def remove_item_from_cart(request):
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        product_id = request.POST.get('product_id')
+
+        try:
+            user_id = request.session['login_id']
+            user_cart = Cart.objects.get(login=user_id)
+            cart_item = CartItem.objects.get(cart=user_cart, product_id=product_id)
+
+            # Remove the item from the cart
+            cart_item.delete()
+
+            # Recalculate the total price of the cart
+            total_price = sum(item.product.price * item.quantity for item in CartItem.objects.filter(cart=user_cart))
+
+            return JsonResponse({
+                'new_total_price': total_price,
+            })
+
+        except (Cart.DoesNotExist, CartItem.DoesNotExist):
+            return JsonResponse({'error': 'Cart or CartItem not found.'}, status=404)
+
+    return JsonResponse({'error': 'Invalid request.'}, status=400)
+
+
+from django.http import JsonResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, redirect
+from .models import Product, Wishlist, WishlistItem, Tbl_user
+
+def add_to_wishlist(request, product_id):
+    if 'login_id' in request.session:
+        product = get_object_or_404(Product, product_id=product_id)
+        user_id = request.session['login_id']
+
+        user_instance = get_object_or_404(Tbl_login, login_id=user_id)
+        
+        if request.method == 'POST':
+            # Get or create a wishlist for the user
+            user_wishlist, created = Wishlist.objects.get_or_create(login=user_instance)
+            # Check if the product is already in the wishlist
+            wishlist_item, item_created = WishlistItem.objects.get_or_create(wishlist=user_wishlist, product=product)
+            if not item_created:
+                return JsonResponse({'success': False, 'message': f'{product.product_name} is already in your wishlist!'})
+
+            return JsonResponse({'success': True, 'message': f'{product.product_name} added to your wishlist successfully!'})
+
+        return JsonResponse({'success': False, 'message': 'Invalid request.'})
+    else:
+        return redirect('login')
+
+def view_wishlist(request):
+    if 'login_id' in request.session:
+        user_id = request.session['login_id']
+        user_instance = get_object_or_404(Tbl_login, login_id=user_id)
+
+        # Get the user's wishlist
+        user_wishlist = Wishlist.objects.filter(login=user_instance).first()
+        wishlist_items = WishlistItem.objects.filter(wishlist=user_wishlist) if user_wishlist else []
+
+        return render(request, 'user/wishlist.html', {'wishlist_items': wishlist_items})
+    else:
+        return redirect('login')
+
+def remove_from_wishlist(request, item_id):
+    if 'login_id' in request.session:
+        wishlist_item = get_object_or_404(WishlistItem, id=item_id)
+        wishlist_item.delete()
+        return JsonResponse({'success': True, 'message': 'Item removed from your wishlist.'})
+    else:
+        return JsonResponse({'success': False, 'message': 'You need to be logged in to perform this action.'})
+
+
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#adminpage
+# from django.shortcuts import render, redirect, get_object_or_404
+# from .models import Category, CategoryAttribute
+
+# def add_category(request):
+#     if request.method == 'POST':
+#         category_name = request.POST.get('category_name')
+#         attribute_names = request.POST.getlist('attribute_names')
+#         attribute_datatypes = request.POST.getlist('attribute_datatypes')
+
+#         existing_category_id = request.POST.get('existing_category')
+
+#         if existing_category_id:
+#             category = get_object_or_404(Category, id=existing_category_id)
+#         elif category_name:
+            
+#             category = Category.objects.create(name=category_name)
+
+#         if attribute_names and attribute_datatypes:
+           
+#             for name, datatype in zip(attribute_names, attribute_datatypes):
+#                 if name:  
+#                     CategoryAttribute.objects.create(category=category, name=name, datatype=datatype)
+
+#         return redirect('add_category')  
+
+    
+#     categories = Category.objects.all()
+
+#     context = {
+#         'categories': categories
+#     }
+#     return render(request, 'admin/add_category.html', context)
+from django.shortcuts import render, redirect
+from .models import Category
+
+def add_category(request):
+    error_message = None
+
+    if request.method == 'POST':
+        category_name = request.POST.get('category_name')
+        
+        if not category_name:
+            error_message = "Category name cannot be empty."
+        elif Category.objects.filter(name__iexact=category_name).exists():
+            error_message = "This category already exists in the database."
+        else:
+            # Create a new Category if it doesn't already exist
+            Category.objects.create(name=category_name)
+            return redirect('view_categories')  # Redirect after successful creation
+
+    return render(request, 'admin/add_category.html', {'error_message': error_message})
+
+
+
+def view_categories(request):
+    categories = Category.objects.all().prefetch_related('attributes')
+    return render(request, 'admin/view_categories.html', {'categories': categories})
+
+
+def add_attribute_to_category(request, category_id):
+    category = get_object_or_404(Category, pk=category_id)
+
+    if request.method == 'POST':
+        attribute_name = request.POST.get('attribute_name')
+
+        if attribute_name:
+            # Add the new attribute to the existing category
+            CategoryAttribute.objects.create(category=category, name=attribute_name)
+            return redirect('view_categories')  # Redirect to category list after adding attribute
+
+    return render(request, 'admin/add_attribute.html', {'category': category})
+
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------
+
+  
+# from django.shortcuts import render, redirect
+# from .models import Metaltype
+# from django.http import HttpResponse
+
+# def add_metaltype(request):
+#     if request.method == 'POST':
+#         name = request.POST.get('name')
+#         if name:
+#             Metaltype.objects.create(name=name)
+#             return redirect('add_metaltype') 
+#         else:
+#             return HttpResponse("Name field cannot be empty.")
+
+#     return render(request, 'admin/add_metaltype.html')
+
+# views.py
+from django.shortcuts import render
+from .models import Metaltype
+
+def view_metaltypes(request):
+    metaltypes = Metaltype.objects.all()
+    return render(request, 'admin/view_metaltype.html', {'metaltypes': metaltypes})
+
+
+from django.shortcuts import render, redirect
+from .models import Metaltype
+
+def add_metaltype(request):
+    error_message = None
+
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        
+        if not name:
+            error_message = "Name field cannot be empty."
+        elif Metaltype.objects.filter(name__iexact=name).exists():
+            error_message = "This metal type already exists in the database."
+        else:
+            Metaltype.objects.create(name=name)
+            return redirect('view_metaltypes')  # Redirect after successful creation
+
+    # Fetch all metal types to display in the template
+    # metaltypes = Metaltype.objects.all()
+
+    return render(request, 'admin/add_metaltype.html', {'error_message': error_message})
+
+
+
+
+
+
+#-----------------------------------------------------------------------------------------------------------------
+
+
+# views.py
+from django.shortcuts import render
+from .models import Stonetype
+
+def view_stonetypes(request):
+    stonetypes = Stonetype.objects.all()
+    return render(request, 'admin/view_stonetypes.html', {'stonetypes': stonetypes})
+
+
+
+
+from django.shortcuts import render, redirect
+from .models import Stonetype
+
+def add_stonetype(request):
+    error_message = None
+
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        
+        if not name:
+            error_message = "Name field cannot be empty."
+        elif Stonetype.objects.filter(name__iexact=name).exists():
+            error_message = "This stone type already exists in the database."
+        else:
+            Stonetype.objects.create(name=name)
+            return redirect('view_stonetypes')  # Redirect after successful creation
+
+    return render(request, 'admin/add_stonetype.html', {'error_message': error_message})
+
+
+
+# from django.shortcuts import render, redirect
+# from .models import Metaltype
+# from django.http import HttpResponse
+
 # def add_stonetype(request):
 #     if request.method == 'POST':
 #         name = request.POST.get('name')
@@ -2397,6 +3023,709 @@ def schedule_store_visit(request):
         
         except Exception as e:
             return JsonResponse({'success': False, 'message': f'An error occurred: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'message': 'Invalid request method.'})
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.views.decorators.csrf import csrf_exempt
+from .models import PickupDetails, StoreVisit
+
+def view_old_gold_exchange(request, user_id):
+    if 'login_id' not in request.session:
+        return redirect('login') # Redirect to login page if user is not authenticated
+
+    user_id = request.session['login_id']
+    try:
+        # Fetch the user instance
+        user = Tbl_user.objects.get(login_id=user_id)
+    except Tbl_user.DoesNotExist:
+        return redirect('login') 
+    # Fetch user-specific old gold exchange details
+    pickup_details = PickupDetails.objects.filter(user=user)
+    store_visit = StoreVisit.objects.filter(user=user)
+    context = {
+        'pickup_details': pickup_details,
+        'store_visit': store_visit
+    }
+    return render(request, 'user/view_old_gold_exchange.html', context)
+
+
+@csrf_exempt
+def update_pickup_details(request, pickup_id):
+    pickup = get_object_or_404(PickupDetails, id=pickup_id)
+
+    if request.method == 'POST':
+        # print("Incoming Data:", request.POST)
+
+        pickup.phone = request.POST.get('phone',pickup.phone)
+        pickup.email = request.POST.get('email',pickup.email)
+        pickup.place = request.POST.get('place', pickup.place)
+        pickup.save()
+        # print("Updated Pickup Details:", pickup)
+
+        return redirect('view_old_gold_exchange', user_id=pickup.user.user_id)
+
+    return render(request, 'user/update_pickup_details.html', {'pickup': pickup})
+
+@csrf_exempt
+def update_or_cancel_store_visit(request, store_visit_id):
+    store_visit = get_object_or_404(StoreVisit, id=store_visit_id)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'update':
+            store_visit.phone = request.POST.get('phone', store_visit.phone)
+            store_visit.date = request.POST.get('date', store_visit.date)
+            store_visit.time = request.POST.get('time', store_visit.time)
+            store_visit.save()
+        elif action == 'cancel':
+            store_visit.status = 'Cancelled'
+            store_visit.save()
+
+        return redirect('view_old_gold_exchange', user_id=store_visit.user.user_id)
+
+    return render(request, 'user/update_or_cancel_store_visit.html', {'store_visit': store_visit})
+
+
+
+# from .models import VendorProduct
+def vendor_home(request):
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+
+    vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])
+
+    # Fetch purchase requests
+    purchase_requests = VendorPurchase.objects.filter(vendor=vendor).order_by('-purchase_date')
+    
+    # Fetch restock requests
+    restock_requests = RestockRequest.objects.filter(
+        product__vendor=vendor,
+        status='Pending'
+    ).order_by('-created_at')
+    
+    # Calculate statistics
+    total_products = VendorProduct.objects.filter(vendor=vendor).count()
+    pending_orders = VendorPurchase.objects.filter(
+        vendor=vendor,
+        status='pending'
+    ).count()
+    total_sales = VendorPayment.objects.filter(
+        vendor=vendor,
+        status='completed'
+    ).aggregate(total=Sum('amount_paid'))['total'] or 0
+
+    # Get payment requests where half of the products are purchased
+    payment_eligible_purchases = []
+    for purchase in purchase_requests.filter(status='accepted', payment__payment_type='post'):
+        purchased_count = Order.objects.filter(
+            cart__items__product__vendor=vendor,
+            status='Delivered'
+        ).count()
+        
+        if purchased_count >= (purchase.quantity / 2):
+            payment_eligible_purchases.append(purchase)
+
+    context = {
+        'vendor': vendor,
+        'purchase_requests': purchase_requests,
+        'restock_requests': restock_requests,
+        'total_products': total_products,
+        'pending_orders': pending_orders,
+        'total_sales': total_sales,
+        'payment_eligible_purchases': payment_eligible_purchases
+    }
+
+    return render(request, 'vendor/dashboard.html', context)
+
+
+# def add_vendor_product(request):
+#     if request.method == 'POST':
+#         supplier = get_object_or_404(Supplier, login=request.user)
+        
+#         try:
+#             product = SupplierProduct(
+#                 supplier=supplier,
+#                 product_name=request.POST['product_name'],
+#                 description=request.POST['description'],
+#                 price=float(request.POST['price']),
+#                 stock=int(request.POST['stock']),
+#                 image=request.FILES['image'],
+#                 category_id=request.POST['category'],
+#                 weight=float(request.POST['weight']),
+#                 metaltype_id=request.POST['metaltype']
+#             )
+#             product.save()
+#             messages.success(request, 'Product added successfully!')
+#             return redirect('view_supplier_products')
+#         except Exception as e:
+#             messages.error(request, f'Error adding product: {str(e)}')
+    
+#     categories = Category.objects.all()
+#     metaltypes = Metaltype.objects.all()
+#     context = {
+#         'categories': categories,
+#         'metaltypes': metaltypes
+#     }
+#     return render(request, 'vendor/add_product.html', context)
+
+
+
+def generate_password():
+    """Generate a random password"""
+    characters = string.ascii_letters + string.digits + "!@#$%^&*()"
+    return ''.join(random.choice(characters) for i in range(12))
+
+def add_vendor(request):
+    if request.method == 'POST':
+        business_name = request.POST.get('business_name')
+        email = request.POST.get('email')
+        contact = request.POST.get('contact')
+        documents = request.FILES.get('documents')
+
+        try:
+            # Generate random password
+            password = generate_password()
+
+            # Create login entry
+            login = Tbl_login.objects.create(
+                email=email,
+                password=password,  # In production, hash this password
+                status=True
+            )
+
+            # Create vendor entry
+            vendor = Vendor.objects.create(
+                business_name=business_name,
+                email=email,
+                contact=contact,
+                login=login,
+                documents=documents
+            )
+
+            # Send email to vendor
+            subject = 'Vendor Account Created - Ornalux'
+            message = f"""
+            Dear {business_name},
+
+            Your vendor account has been created successfully on Ornalux.
+
+            Login Details:
+            Email: {email}
+            Password: {password}
+
+            Please login and change your password immediately.
+
+            Best regards,
+            Ornalux Team
+            """
+
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+
+            messages.success(request, 'Vendor added successfully. Login credentials have been sent to their email.')
+            return redirect('add_vendor')
+
+        except Exception as e:
+            messages.error(request, f'Error creating vendor account: {str(e)}')
+            return redirect('add_vendor')
+
+    return render(request, 'admin/add_vendor.html')
+
+def verify_vendor_documents(request, vendor_id):
+    if not request.session.get('user_type') == 'admin':
+        messages.error(request, 'Unauthorized access')
+        return redirect('login')
+
+    vendor = get_object_or_404(Vendor, vendor_id=vendor_id)
+    
+    try:
+        # Initialize document verifier
+        verifier = BusinessDocumentVerifier()
+        
+        # Get the full path of the uploaded document
+        document_path = os.path.join(settings.MEDIA_ROOT, str(vendor.documents))
+        
+        # Verify the document
+        verification_results = verifier.verify_document(document_path)
+        
+        # Update vendor status based on verification results
+        if verification_results['success'] and verification_results['is_valid']:
+            vendor.verification_status = 'verified'
+            vendor.verification_remarks = "Document verified successfully"
+        else:
+            vendor.verification_status = 'rejected'
+            vendor.verification_remarks = verification_results.get('message', 'Document verification failed')
+        
+        vendor.save()
+        
+        # Send email notification to vendor
+        subject = 'Document Verification Status - Ornalux'
+        message = f"""
+        Dear {vendor.business_name},
+
+        Your document verification status has been updated.
+        Status: {vendor.verification_status.title()}
+        
+        Remarks:
+        {vendor.verification_remarks}
+
+        Please contact support if you have any questions.
+
+        Best regards,
+        Ornalux Team
+        """
+        
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [vendor.email],
+            fail_silently=True,
+        )
+
+        messages.success(request, 'Document verification completed')
+        
+    except Exception as e:
+        messages.error(request, f'Error during verification: {str(e)}')
+    
+    return redirect('verify_vendor')
+
+from django.http import JsonResponse
+from .document_verification import BusinessDocumentVerifier
+import os
+
+def verify_document(request):
+    """Handle document verification API endpoint"""
+    if request.method == 'POST' and request.FILES.get('document'):
+        try:
+            document = request.FILES['document']
+            
+            # Save the uploaded file temporarily
+            temp_path = os.path.join(settings.MEDIA_ROOT, 'temp', document.name)
+            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+            
+            with open(temp_path, 'wb+') as destination:
+                for chunk in document.chunks():
+                    destination.write(chunk)
+            
+            # Analyze document
+            verifier = BusinessDocumentVerifier()
+            results = verifier.verify_document(temp_path)
+            
+            # Clean up
+            os.remove(temp_path)
+            
+            return JsonResponse(results)
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Invalid request method or no document provided'
+    })
+
+def verify_document_page(request):
+    """Render the document verification page"""
+    return render(request, 'admin/verify_vendor.html')
+
+
+# def vendor_add_product(request):
+#     if request.method == 'POST':
+#         try:
+#             # Get the vendor instance
+#             vendor = Vendor.objects.get(login_id=request.session['login_id'])
+            
+#             # Create the main product
+#             product = VendorProduct(
+#                 vendor=vendor,
+#                 product_name=request.POST['product_name'],
+#                 product_description=request.POST['product_description'],
+#                 category_id=request.POST['category'],
+#                 metaltype_id=request.POST['metaltype'],
+#                 weight=float(request.POST['weight']),
+#                 purity=int(request.POST['purity']),
+#                 gender=request.POST['gender'],
+#                 bis_hallmark=request.POST.get('bis_hallmark'),
+#                 estimated_delivery=int(request.POST.get('estimated_delivery', 7)),
+#                 stock_quantity=int(request.POST['stock_quantity']),
+#                 home_delivery=bool(request.POST.get('home_delivery')),
+#                 store_pickup=bool(request.POST.get('store_pickup')),
+#                 try_at_home=bool(request.POST.get('try_at_home'))
+#             )
+
+#             # Handle image uploads
+#             if 'image' in request.FILES:
+#                 product.image = request.FILES['image']
+#             if 'image2' in request.FILES:
+#                 product.image2 = request.FILES['image2']
+#             if 'image3' in request.FILES:
+#                 product.image3 = request.FILES['image3']
+#             if 'image4' in request.FILES:
+#                 product.image4 = request.FILES['image4']
+#             if 'product_video' in request.FILES:
+#                 product.product_video = request.FILES['product_video']
+
+#             # Save the product first to get an ID
+#             product.save()
+
+#             # Handle stone details
+#             stone_types = request.POST.getlist('stonetype[]')
+#             for i, stone_type in enumerate(stone_types):
+#                 if stone_type:
+#                     is_diamond = request.POST.getlist('is_diamond[]')[i] == 'true'
+                    
+#                     stone = VendorProductStone(
+#                         vendor_product=product,
+#                         stone_type_id=stone_type,
+#                         is_diamond=is_diamond
+#                     )
+
+#                     if is_diamond:
+#                         stone.diamond_weight = float(request.POST.getlist('diamond_weight[]')[i])
+#                         stone.diamond_count = int(request.POST.getlist('diamond_count[]')[i])
+#                         stone.diamond_quality = request.POST.getlist('diamond_quality[]')[i]
+#                     else:
+#                         stone.stone_weight = float(request.POST.getlist('stone_weight[]')[i])
+#                         stone.stone_count = int(request.POST.getlist('stone_count[]')[i])
+#                         stone.stone_clarity = request.POST.getlist('stone_clarity[]')[i]
+                    
+#                     stone.save()
+#                     stone.calculate_stone_cost()
+
+#             # Handle category attributes
+#             for key, value in request.POST.items():
+#                 if key.startswith('attribute_'):
+#                     attr_id = key.split('_')[1]
+#                     VendorProductAttribute.objects.create(
+#                         vendor_product=product,
+#                         attribute_name=request.POST.get(f'attribute_name_{attr_id}'),
+#                         attribute_value=value
+#                     )
+
+#             # Recalculate all prices
+#             product.calculate_prices()
+#             product.save()
+
+#             messages.success(request, 'Product added successfully!')
+#             return redirect('vendor_home')
+
+#         except Exception as e:
+#             messages.error(request, f'Error adding product: {str(e)}')
+#             return redirect('vendor_add_product')
+
+#     # GET request - show the form
+#     context = {
+#         'categories': Category.objects.all(),
+#         'metaltypes': Metaltype.objects.all(),
+#         'stonetypes': Stonetype.objects.all()
+#     }
+#     return render(request, 'vendor/add_product.html', context)
+
+def vendor_pending_orders(request):
+    if not request.user.is_authenticated or request.session.get('user_type') != 'vendor':
+        messages.error(request, 'You need to log in as a vendor to access this page.')
+        return redirect('login')
+    
+    vendor = get_object_or_404(Vendor, login_id=request.user.login_id)  # Adjust based on your user model
+    pending_orders = RestockRequest.objects.filter(
+        product__vendor=vendor,
+        status='Pending'
+    ).select_related('product')
+    
+    return render(request, 'vendor/pending_orders.html', {
+        'pending_orders': pending_orders
+    })
+
+
+def vendor_order_history(request):
+    """View for displaying vendor's order history"""
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        messages.error(request, 'Please login as a vendor to continue')
+        return redirect('login')
+    
+    completed_orders = RestockRequest.objects.filter(
+        product__supplier=request.user.vendor
+    ).exclude(status='Pending').order_by('-requested_date')
+    
+    return render(request, 'vendor/order_history.html', {
+        'completed_orders': completed_orders
+    })
+
+def handle_restock_request(request, request_id):
+    if not request.session.get('user_type') == 'vendor':
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    
+    try:
+        restock_request = get_object_or_404(RestockRequest, id=request_id)
+        
+        action = request.POST.get('action')
+        if action == 'accept':
+            restock_request.status = 'Accepted'
+            restock_request.save()
+            # Create a payment request for the admin
+            PaymentRequest.objects.create(
+                vendor=restock_request.product.vendor,
+                amount=restock_request.requested_quantity * restock_request.product.price,
+                status='Pending'
+            )
+            return JsonResponse({'success': True, 'message': 'Restock request accepted and payment request created.'})
+        
+        elif action == 'reject':
+            restock_request.status = 'Declined'
+            restock_request.save()
+            return JsonResponse({'success': True, 'message': 'Restock request declined.'})
+        
+    except Exception as e:
+        print(f"Error handling restock request: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_POST
+def vendor_delete_product(request, product_id):
+    if not request.session.get('user_type') == 'vendor':
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    
+    try:
+        product = get_object_or_404(VendorProduct, pk=product_id, vendor__login_id=request.session['login_id'])
+        product.status = False  # Soft delete
+        product.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+from django.shortcuts import render, get_object_or_404
+from .models import Vendor
+
+def vendor_restock_requests(request):
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+
+    vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])
+    # Correctly filter restock requests based on the vendor
+    restock_requests = RestockRequest.objects.filter(product__vendor=vendor, status='Pending')
+
+    context = {
+        'vendor': vendor,
+        'restock_requests': restock_requests,
+    }
+
+    return render(request, 'vendor/restock_requests.html', context)
+
+from django.shortcuts import render, get_object_or_404
+from .models import Order, Vendor
+
+def vendor_declined_orders(request):
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+
+    vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])
+    declined_orders = Order.objects.filter(user__login=vendor.login, status='Cancelled')  # Adjust the filter as needed
+
+    context = {
+        'vendor': vendor,
+        'declined_orders': declined_orders,
+    }
+
+    return render(request, 'vendor/declined_orders.html', context)
+
+from django.shortcuts import render, get_object_or_404
+from .models import Vendor, Order
+
+def vendor_payment_details(request):
+    if 'login_id' not in request.session or request.session.get('user_type') != 'vendor':
+        return redirect('login')
+
+    vendor = get_object_or_404(Vendor, login_id=request.session['login_id'])
+    # Fetch payment details related to the vendor's orders
+    payment_details = Order.objects.filter(user__login=vendor.login)  # Adjust the filter as needed
+
+    context = {
+        'vendor': vendor,
+        'payment_details': payment_details,
+    }
+
+    return render(request, 'vendor/payment_details.html', context)
+
+@require_POST
+def vendor_toggle_product_status(request, product_id):
+    if not request.session.get('user_type') == 'vendor':
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    
+    try:
+        product = get_object_or_404(VendorProduct, pk=product_id, vendor__login_id=request.session['login_id'])
+        product.status = not product.status  # Toggle the status
+        product.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_POST
+def vendor_restock_product(request, product_id):
+    if not request.session.get('user_type') == 'admin':
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    
+    try:
+        # Get the product using product_id
+        product = get_object_or_404(Product, product_id=product_id)
+        
+        # Get the requested quantity from the request body
+        data = json.loads(request.body)
+        requested_quantity = int(data.get('requested_quantity', 0))  # Convert to integer
+
+        # Check if a restock request already exists for this product
+        restock_request, created = RestockRequest.objects.get_or_create(
+            product=product,
+            defaults={'requested_quantity': requested_quantity, 'status': 'Pending'}
+        )
+
+        if not created:
+            # If the request already exists, update the requested quantity to the new value
+            restock_request.requested_quantity = requested_quantity
+            restock_request.save()
+
+        # Log the request
+        print(f'Restock request for product {product.product_name} set to quantity {requested_quantity}')
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Restock request processed successfully'
+        })
+    except Product.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Product not found'
+        })
+    except ValueError as ve:
+        return JsonResponse({
+            'success': False,
+            'error': f'Invalid quantity: {str(ve)}'
+        })
+    except Exception as e:
+        print(f"Error in restock request: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@require_POST
+def vendor_cancel_order(request, product_id):
+    if not request.session.get('user_type') == 'vendor':
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    
+    try:
+        product = get_object_or_404(Product, product_id=product_id)
+        
+        # Logic to cancel the order (e.g., update status in the database)
+        # Assuming you have a way to mark the order as cancelled
+        # This could involve updating a status field in the relevant model
+        
+        print(f'Order for product {product.product_name} has been cancelled.')
+
+        # Send notification to the vendor
+        vendor_email = product.vendor.email  # Assuming the vendor has an email field
+        subject = f'Order Cancellation Notification for {product.product_name}'
+        message = f'Dear Vendor,\n\nThe order for the product "{product.product_name}" is no longer needed for the meantime.\n\nThank you.'
+        
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,  # Your default email from settings
+            [vendor_email],
+            fail_silently=False,
+        )
+        
+        return JsonResponse({'success': True, 'message': 'Order cancelled successfully and notification sent to the vendor.'})
+    except Exception as e:
+        print(f"Error cancelling order: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_POST
+def accept_restock_request(request, request_id):
+    if not request.session.get('user_type') == 'vendor':
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+    
+    try:
+        restock_request = get_object_or_404(RestockRequest, id=request_id)
+        restock_request.status = 'Accepted'
+        restock_request.save()
+
+        # Create a payment request for the admin
+        PaymentRequest.objects.create(
+            vendor=restock_request.product.vendor,
+            amount=restock_request.requested_quantity * restock_request.product.price,  # Assuming price is available
+            status='Pending'
+        )
+
+        return JsonResponse({'success': True, 'message': 'Restock request accepted and payment request created.'})
+    except Exception as e:
+        print(f"Error accepting restock request: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_POST
+def process_payment(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        payment_id = data.get('payment_id')
+        amount = data.get('amount')
+        date = data.get('date')
+        product_name = data.get('product_name')
+        quantity = data.get('quantity')
+        payment_type = data.get('payment_type')
+
+        # Create a new VendorPayment entry
+        try:
+            vendor_payment = VendorPayment.objects.create(
+                payment_id=payment_id,
+                amount=amount,
+                date=date,
+                product_name=product_name,
+                quantity=quantity,
+                payment_type=payment_type,
+                status='Completed'  # Set status to completed
+            )
+
+            # Update the corresponding PaymentRequest status
+            payment_request = PaymentRequest.objects.get(id=window.currentPaymentId)
+            payment_request.status = 'Completed'
+            payment_request.save()
+
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+
+from django.http import JsonResponse
+
+def update_payment_status(request, payment_id):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        status = data.get('status')
+
+        try:
+            payment_request = PaymentRequest.objects.get(id=payment_id)
+            payment_request.status = status
+            payment_request.save()
+            return JsonResponse({'status': 'success'})
+        except PaymentRequest.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Payment request not found.'})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+
+def view_new_products(request):
+    products = VendorProduct.objects.all().order_by('-created_at')  # Assuming 'created_at' is the field for the date added
+    return render(request, 'admin/view_new_products.html', {'products': products})
 
 @require_POST
 def send_purchase_request(request):
