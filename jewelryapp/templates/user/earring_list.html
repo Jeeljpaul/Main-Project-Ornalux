@@ -5,8 +5,337 @@
   Earring Collections
 {% endblock title %}
 
-
 {% block content %}
+<style>
+    .container-fluid {
+        padding: 30px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+    }
+
+    /* Sidebar Filter Section */
+    .filters {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        position: fixed;
+        height: calc(100vh - 60px);
+        overflow-y: auto;
+        width: 22%;
+        box-shadow: 5px 0 30px rgba(0, 0, 0, 0.05);
+    }
+
+    .filters h4 {
+        color: #2d3436;
+        font-weight: 600;
+        margin-bottom: 25px;
+        font-size: 1.3rem;
+        letter-spacing: 0.5px;
+    }
+
+    .filters h3 {
+        color: #2d3436;
+        font-weight: 600;
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+        letter-spacing: 0.5px;
+    }
+
+    .filters label {
+        display: block;
+        margin-bottom: 15px;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .filters label:hover {
+        color: #4a90e2;
+        transform: translateX(5px);
+    }
+
+    /* Custom Checkbox Styling */
+    .filters input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #4a90e2;
+        border-radius: 5px;
+        margin-right: 10px;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .filters input[type="checkbox"]:checked {
+        background-color: #4a90e2;
+    }
+
+    .filters input[type="checkbox"]:checked::after {
+        content: '✓';
+        color: white;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 12px;
+    }
+
+    /* Main Product List Section */
+    .product-list {
+        margin-left: 24%;
+        padding: 0 20px;
+    }
+
+    .product-list h2 {
+        color: #2d3436;
+        font-size: 2rem;
+        margin-bottom: 30px;
+        font-weight: 600;
+    }
+
+    .product {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        margin-bottom: 30px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .product:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .product-image-container {
+        position: relative;
+        padding-top: 100%;
+        overflow: hidden;
+        background: #f8f9fa;
+    }
+
+    .product img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .product:hover img {
+        transform: scale(1.1) rotate(2deg);
+    }
+
+    .product-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+    }
+
+    .product:hover .product-overlay {
+        opacity: 1;
+    }
+
+    .product-info {
+        padding: 20px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background: white;
+        position: relative;
+        z-index: 1;
+    }
+
+    .product h5 {
+        margin: 0 0 10px 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2d3436;
+        line-height: 1.4;
+        transition: color 0.3s ease;
+    }
+
+    .product:hover h5 {
+        color: #4a90e2;
+    }
+
+    .product-price {
+        margin: 0 0 15px 0;
+        color: #e44d26;
+        font-size: 1.3rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .product-price strong {
+        font-size: 1rem;
+        color: #666;
+    }
+
+    .product-meta {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+    .product-tag {
+        background: #f8f9fa;
+        color: #666;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+    }
+
+    .product:hover .product-tag {
+        background: #e3f2fd;
+        color: #4a90e2;
+    }
+
+    .button {
+        display: inline-block;
+        padding: 12px 25px;
+        background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        text-align: center;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent
+        );
+        transition: 0.5s;
+    }
+
+    .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+        text-decoration: none;
+        color: white;
+    }
+
+    .button:hover::before {
+        left: 100%;
+    }
+
+    .button:active {
+        transform: translateY(0);
+    }
+
+    /* Product Card Animation */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .product {
+        animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .filters {
+            width: 25%;
+        }
+        .product-list {
+            margin-left: 27%;
+        }
+    }
+
+    @media (max-width: 992px) {
+        .filters {
+            width: 30%;
+        }
+        .product-list {
+            margin-left: 32%;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding: 15px;
+        }
+        .filters {
+            display: none;
+        }
+        .product-list {
+            margin-left: 0;
+        }
+        .product-image-container {
+            padding-top: 75%;
+        }
+        .product-info {
+            padding: 15px;
+        }
+        .product h5 {
+            font-size: 1.1rem;
+        }
+        .product-price {
+            font-size: 1.2rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .product {
+            margin-bottom: 20px;
+        }
+        .product h5 {
+            font-size: 1rem;
+        }
+        .product-price {
+            font-size: 1.1rem;
+        }
+        .product-tag {
+            font-size: 0.8rem;
+            padding: 3px 10px;
+        }
+    }
+</style>
 
 <!-- Sidebar Filter Section -->
 <div class="filters">
@@ -20,11 +349,10 @@
                     <input type="checkbox" name="earring_style" value="{{ style }}"
                         {% if style in selected_earring_styles %}checked{% endif %}>
                     {{ style }}
-                </label><br>
+                </label>
             {% endfor %}
         </div>
 
-        <br>
         <!-- Shop For Filter -->
         <div>
             <h3>Shop For:</h3>
@@ -33,11 +361,10 @@
                     <input type="checkbox" name="shop_for" value="{{ category }}"
                         {% if category in selected_shop_for %}checked{% endif %}>
                     {{ category }}
-                </label><br>
+                </label>
             {% endfor %}
         </div>
 
-        <br>
         <!-- Gemstone Filter -->
         <div>
             <h3>Gemstone:</h3>
@@ -46,11 +373,10 @@
                     <input type="checkbox" name="gemstone" value="{{ gem }}"
                         {% if gem in selected_gemstones %}checked{% endif %}>
                     {{ gem }}
-                </label><br>
+                </label>
             {% endfor %}
         </div>
 
-        <br>
         <!-- Metal Type Filter -->
         <div>
             <h3>Metal Type:</h3>
@@ -59,7 +385,7 @@
                     <input type="checkbox" name="metal_type" value="{{ mat }}"
                         {% if mat in selected_materials %}checked{% endif %}>
                     {{ mat }}
-                </label><br>
+                </label>
             {% endfor %}
         </div>
 
@@ -75,10 +401,22 @@
         {% if earrings %}
             {% for earring in earrings %}
                 <div class="product" data-earringstyle="{{ earring.earring_style }}" data-shopfor="{{ earring.shop_for }}" data-gemstone="{{ earring.gemstone }}" data-material="{{ earring.material }}">
-                    <img src="{{ earring.images.url }}" alt="{{ earring.product_name }}">
-                    <h5>{{ earring.product_name }}</h5>
-                    <p><strong>Price:</strong> Rs:{{ earring.price }}</p>
-                    <a href="{% url 'earring_detail' earring.product_id %}" class="button">View Details</a>
+                    <div class="product-image-container">
+                        <img src="{{ earring.images.url }}" alt="{{ earring.product_name }}">
+                        <div class="product-overlay">
+                            <a href="{% url 'earring_detail' earring.product_id %}" class="button">View Details</a>
+                        </div>
+                    </div>
+                    <div class="product-info">
+                        <h5>{{ earring.product_name }}</h5>
+                        <div class="product-meta">
+                            <span class="product-tag">{{ earring.earring_style }}</span>
+                            <span class="product-tag">{{ earring.material }}</span>
+                        </div>
+                        <div class="product-price">
+                            <strong>Price:</strong> Rs:{{ earring.price }}
+                        </div>
+                    </div>
                 </div>
             {% endfor %}
         {% else %}
@@ -86,6 +424,5 @@
         {% endif %}
     </div>
 </div>
-
 
 {% endblock content %}
