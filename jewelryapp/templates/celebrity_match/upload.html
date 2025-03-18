@@ -1,3 +1,7 @@
+{% extends 'user/trial.html' %}
+{% load static %}
+
+{% block title %}Find Celebrity Jewelry{% endblock title %}
 
 {% block content %}
 <div class="celebrity-match-container">
@@ -63,6 +67,8 @@
         color: #333;
         margin-bottom: 20px;
         font-size: 32px;
+        margin-left: 0;
+        padding: 0;
     }
     
     .upload-description {
@@ -94,6 +100,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        margin-bottom: 0;
     }
     
     .form-group {
@@ -129,7 +136,7 @@
         border-radius: 30px;
         font-size: 16px;
         cursor: pointer;
-        transition: background 0.3s ease;
+        transition: background 0.3s ease, transform 0.3s ease;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -142,6 +149,8 @@
     
     .upload-button:hover {
         background: #3579cf;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(53, 121, 207, 0.3);
     }
     
     .upload-tips {

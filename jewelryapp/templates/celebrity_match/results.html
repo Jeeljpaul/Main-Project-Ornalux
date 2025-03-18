@@ -1,3 +1,7 @@
+{% extends 'user/trial.html' %}
+{% load static %}
+
+{% block title %}Celebrity Jewelry Matches{% endblock title %}
 
 {% block content %}
 <div class="celebrity-results-container">
@@ -36,7 +40,7 @@
                     <span class="category">{{ match.category }}</span>
                     <span class="price">${{ match.price }}</span>
                 </div>
-                <a href="{{ match.get_absolute_url }}" class="view-details-btn">View Details</a>
+                <a href="{% url 'detail' match.id%}" class="view-details-btn">View Details</a>
             </div>
         </div>
         {% empty %}
@@ -88,6 +92,8 @@
         color: #333;
         margin: 0;
         font-size: 32px;
+        margin-left: 0;
+        padding: 0;
     }
     
     .detection-badge {
@@ -240,11 +246,13 @@
         border-radius: 5px;
         text-decoration: none;
         font-weight: bold;
-        transition: background 0.3s ease;
+        transition: background 0.3s ease, transform 0.3s ease;
     }
     
     .view-details-btn:hover {
         background: #3579cf;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(53, 121, 207, 0.3);
     }
     
     .no-results {
@@ -287,11 +295,13 @@
         text-decoration: none;
         font-weight: bold;
         margin-top: 20px;
-        transition: background 0.3s ease;
+        transition: background 0.3s ease, transform 0.3s ease;
     }
     
     .try-again-btn:hover {
         background: #3579cf;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(53, 121, 207, 0.3);
     }
     
     .back-to-upload {
@@ -307,11 +317,13 @@
         border-radius: 30px;
         text-decoration: none;
         font-weight: bold;
-        transition: background 0.3s ease;
+        transition: background 0.3s ease, transform 0.3s ease;
     }
     
     .upload-another-btn:hover {
         background: #5a6268;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(90, 98, 104, 0.3);
     }
     
     @media (max-width: 768px) {
