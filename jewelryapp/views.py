@@ -2411,10 +2411,12 @@ def remove_address(request, address_id):
         try:
             address = Billing.objects.get(id=address_id)
             address.delete()
-            return JsonResponse({'status': 'success'})
+            messages.success(request, "Address removed successfully!")
+            return redirect('profile')
         except Billing.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Address not found'})
-    return JsonResponse({'status': 'error', 'message': 'Invalid request'})
+            messages.error(request, "Address not found.")
+            return redirect('profile')
+    return redirect('profile')
 def order_summary(request):
     if 'login_id' not in request.session:
         return redirect('login')

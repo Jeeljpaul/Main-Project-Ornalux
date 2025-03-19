@@ -84,6 +84,7 @@ urlpatterns = [
     path('addresses/', views.address_view, name='address_view'),
     path('select_address/', views.select_address, name='select_address'),
     path('add_address/', views.add_address, name='add_address'),
+    path('remove_address/<int:address_id>/', views.remove_address, name='remove_address'),
     path('order-summary/', views.order_summary, name='order_summary'),
 
     path('order_history/', views.order_history, name='order_history'),
