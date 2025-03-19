@@ -2,391 +2,664 @@
 {% include 'user/trial.html' %}
 
 {% block content %}
+<style>
+    /* Enhanced base styles */
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #f8f9fa;
+        color: #2d3436;
+    }
+    
+    .ring-size-container {
+        max-width: 850px;
+        margin: 60px auto;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .ring-size-container::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 8px;
+        background: linear-gradient(to right, #1e3c72, #2a5298, #6d74cc);
+    }
+    
+    /* Back button styles */
+    .back-button-container {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 18px;
+        background: linear-gradient(45deg, #1e3c72, #2a5298);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        box-shadow: 0 4px 10px rgba(42, 82, 152, 0.3);
+    }
+    
+    .back-button:hover {
+        transform: translateX(-5px);
+        box-shadow: 0 6px 15px rgba(42, 82, 152, 0.4);
+        text-decoration: none;
+        color: white;
+    }
+    
+    .back-button i {
+        margin-right: 8px;
+    }
+    
+    .page-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 30px;
+        color: #1e3c72;
+        text-align: center;
+        position: relative;
+        padding-bottom: 15px;
+    }
+    
+    .page-title::after {
+        content: "";
+        position: absolute;
+        width: 80px;
+        height: 4px;
+        background: linear-gradient(to right, #1e3c72, #2a5298);
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 2px;
+    }
+    
+    /* Enhanced video container */
+    .video-container {
+        position: relative;
+        margin: 30px auto;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        background: #000;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .video-container:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    video {
+        width: 100%;
+        max-width: 640px;
+        border-radius: 15px;
+        display: block;
+        margin: 0 auto;
+        border: none;
+        background-color: #000;
+    }
+    
+    /* Enhanced guidelines section */
+    #guidelines {
+        margin: 25px auto;
+        padding: 25px;
+        background: linear-gradient(145deg, #ffffff, #f5f7fa);
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        border-left: 5px solid #1e3c72;
+        max-width: 650px;
+    }
+    
+    #guidelines h3 {
+        color: #1e3c72;
+        font-weight: 600;
+        margin-bottom: 15px;
+        font-size: 1.3rem;
+    }
+    
+    #guidelines ul {
+        padding-left: 20px;
+        margin-bottom: 0;
+    }
+    
+    #guidelines li {
+        padding: 8px 0;
+        position: relative;
+        line-height: 1.5;
+    }
+    
+    #guidelines li::before {
+        content: "✓";
+        color: #2a5298;
+        font-weight: bold;
+        margin-right: 8px;
+        display: inline-block;
+    }
+    
+    /* Enhanced buttons */
+    button {
+        padding: 14px 28px;
+        font-size: 16px;
+        font-weight: 600;
+        background: linear-gradient(45deg, #1e3c72, #2a5298);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(42, 82, 152, 0.3);
+        position: relative;
+        overflow: hidden;
+        margin: 10px 8px;
+        letter-spacing: 1px;
+        z-index: 1;
+    }
+    
+    button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(45deg, #2a5298, #4760bb);
+        transition: width 0.5s ease;
+        z-index: -1;
+    }
+    
+    button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(42, 82, 152, 0.4);
+    }
+    
+    button:hover::before {
+        width: 100%;
+    }
+    
+    button:active {
+        transform: translateY(0);
+        box-shadow: 0 4px 8px rgba(42, 82, 152, 0.2);
+    }
+    
+    button:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+    }
+    
+    button:disabled::before {
+        width: 0;
+    }
+    
+    /* Enhanced status elements */
+    #status {
+        font-size: 18px;
+        margin: 15px 0;
+        padding: 12px;
+        border-radius: 10px;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+        color: #555;
+    }
+    
+    #ring-size, #measurement {
+        margin: 15px 0;
+        padding: 15px;
+        border-radius: 10px;
+        background: linear-gradient(145deg, #ffffff, #f5f7fa);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+    
+    #ring-size {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e3c72;
+    }
+    
+    #measurement {
+        font-size: 20px;
+        color: #2a5298;
+    }
+    
+    /* Status classes with animations */
+    .loading {
+        color: #666;
+        font-style: italic;
+        display: inline-block;
+        position: relative;
+        padding-right: 30px;
+    }
+    
+    .loading::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        top: 50%;
+        width: 20px;
+        height: 20px;
+        margin-top: -10px;
+        border: 3px solid rgba(42, 82, 152, 0.3);
+        border-radius: 50%;
+        border-top-color: #2a5298;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+    
+    .error {
+        color: #dc3545;
+        font-weight: bold;
+        background-color: rgba(220, 53, 69, 0.1);
+        border-left: 4px solid #dc3545;
+        animation: shake 0.5s ease-in-out;
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20%, 60% { transform: translateX(-5px); }
+        40%, 80% { transform: translateX(5px); }
+    }
+    
+    .success {
+        color: #28a745;
+        font-weight: bold;
+        background-color: rgba(40, 167, 69, 0.1);
+        border-left: 4px solid #28a745;
+        animation: pulse 1s ease;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    /* Enhanced hand overlay */
+    #hand-overlay {
+        opacity: 0.8;
+    }
+    
+    .overlay-guide {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 60%;
+        height: 80%;
+        border: 3px dashed #1e3c72;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 15px;
+        animation: pulseBorder 2s infinite;
+    }
+    
+    @keyframes pulseBorder {
+        0% { border-color: rgba(30, 60, 114, 0.6); }
+        50% { border-color: rgba(30, 60, 114, 1); }
+        100% { border-color: rgba(30, 60, 114, 0.6); }
+    }
+    
+    .overlay-text {
+        color: #fff;
+        font-weight: bold;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+        background-color: rgba(42, 82, 152, 0.8);
+        padding: 8px 15px;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+        animation: fadeInOut 2s infinite;
+    }
+    
+    @keyframes fadeInOut {
+        0%, 100% { opacity: 0.8; }
+        50% { opacity: 1; }
+    }
+    
+    /* Responsive styles */
+    @media (max-width: 768px) {
+        .page-title {
+            font-size: 2rem;
+        }
+        
+        .ring-size-container {
+            padding: 20px;
+            margin-top: 40px;
+        }
+        
+        button {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        #guidelines {
+            padding: 15px;
+        }
+        
+        #ring-size {
+            font-size: 20px;
+        }
+        
+        #measurement {
+            font-size: 18px;
+        }
+    }
+</style>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Ring Size Measurement</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            margin-top: 30px;
-        }
-        .video-container {
-            position: relative;
-            display: inline-block;
-            margin: 20px auto;
-        }
-        video {
-            border: 2px solid #333;
-            width: 640px;
-            height: 480px;
-            background-color: #000;
-        }
-        canvas {
+<div class="ring-size-container">
+    <div class="back-button-container">
+        <a href="{% url 'ring_list' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Rings
+        </a>
+    </div>
+
+    <h1 class="page-title">AI-Based Ring Size Measurement</h1>
+    
+    <div id="guidelines">
+        <h3>Guidelines for Accurate Measurement:</h3>
+        <ul>
+            <li>Hold your hand upright with fingers spread</li>
+            <li>Ensure good lighting</li>
+            <li>Keep your hand steady</li>
+            <li>Position your ring finger clearly in view</li>
+            <li>Keep your hand about 30-40cm from the camera</li>
+            <li>Make sure your entire hand is visible</li>
+        </ul>
+    </div>
+
+    <div class="video-container">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display: none;"></canvas>
+        <canvas id="overlay" style="
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        button:hover {
-            background-color: #218838;
-        }
-        #status {
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 10px;
-            color: #555;
-        }
-        #ring-size, #measurement {
-            font-weight: bold;
-            color: #333;
-            font-size: 22px;
-            margin-top: 10px;
-        }
-        .loading {
-            display: none;
-            color: #666;
-            font-style: italic;
-        }
-        .error {
-            color: #dc3545;
-            font-weight: bold;
-        }
-        .success {
-            color: #28a745;
-            font-weight: bold;
-        }
-        #guidelines {
-            margin: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-        }
-        #hand-overlay {
-            opacity: 0.8;
-        }
-        @media (max-width: 768px) {
-            video {
-                width: 100%;
-                height: auto;
-                max-width: 640px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>AI-Based Ring Size Measurement</h1>
-        
-        <div id="guidelines">
-            <h3>Guidelines for Accurate Measurement:</h3>
-            <ul>
-                <li>Hold your hand upright with fingers spread</li>
-                <li>Ensure good lighting</li>
-                <li>Keep your hand steady</li>
-                <li>Position your ring finger clearly in view</li>
-                <li>Keep your hand about 30-40cm from the camera</li>
-                <li>Make sure your entire hand is visible</li>
-            </ul>
-        </div>
-
-        <div class="video-container">
-            <video id="video" autoplay playsinline></video>
-            <canvas id="canvas" style="display: none;"></canvas>
-            <canvas id="overlay" style="
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-            "></canvas>
-            <div id="hand-overlay" style="
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-            ">
-                <div style="
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 60%;
-                    height: 80%;
-                    border: 2px dashed #28a745;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                ">
-                    <div style="
-                        color: #28a745;
-                        font-weight: bold;
-                        text-shadow: 1px 1px 2px white;
-                        background-color: rgba(255, 255, 255, 0.7);
-                        padding: 5px 10px;
-                        border-radius: 5px;
-                    ">Place hand here</div>
-                </div>
+            pointer-events: none;
+        "></canvas>
+        <div id="hand-overlay" style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        ">
+            <div class="overlay-guide">
+                <div class="overlay-text">Place hand here</div>
             </div>
         </div>
-        
-        <div id="loading" class="loading">Processing your hand measurement...</div>
-        <button id="capture">Measure Ring Size</button>
-        <p id="status">Show one hand upright for accurate measurement.</p>
-        <h2 id="ring-size">Ring Size: --</h2>
-        <h3 id="measurement">Measurement: --</h3>
     </div>
+    
+    <div id="loading" class="loading">Processing your hand measurement...</div>
+    <div style="text-align: center;">
+        <button id="capture">Measure Ring Size</button>
+    </div>
+    <div id="status">Show one hand upright for accurate measurement.</div>
+    <div id="ring-size">Ring Size: --</div>
+    <div id="measurement">Measurement: --</div>
+</div>
 
-    <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
-        
-        // Add these lines for overlay canvas
-        const overlayCanvas = document.getElementById('overlay');
-        const overlayCtx = overlayCanvas.getContext('2d');
-        
-        const captureButton = document.getElementById('capture');
-        const statusText = document.getElementById('status');
-        const ringSizeText = document.getElementById('ring-size');
-        const measurementText = document.getElementById('measurement');
-        const loadingText = document.getElementById('loading');
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    
+    // Add these lines for overlay canvas
+    const overlayCanvas = document.getElementById('overlay');
+    const overlayCtx = overlayCanvas.getContext('2d');
+    
+    const captureButton = document.getElementById('capture');
+    const statusText = document.getElementById('status');
+    const ringSizeText = document.getElementById('ring-size');
+    const measurementText = document.getElementById('measurement');
+    const loadingText = document.getElementById('loading');
 
-        // Measurement configuration
-        const REQUIRED_STABLE_MEASUREMENTS = 10;
-        const STABILITY_THRESHOLD = 1.5;
-        const MEASUREMENT_INTERVAL = 500;
+    // Measurement configuration
+    const REQUIRED_STABLE_MEASUREMENTS = 10;
+    const STABILITY_THRESHOLD = 1.5;
+    const MEASUREMENT_INTERVAL = 500;
 
-        // Measurement state
-        let measurements = [];
-        let isStabilized = false;
-        let finalMeasurement = null;
+    // Measurement state
+    let measurements = [];
+    let isStabilized = false;
+    let finalMeasurement = null;
 
-        function drawLandmarks(data) {
-            if (!overlayCtx || !overlayCanvas) {
-                console.error('Overlay canvas not initialized');
-                return;
-            }
-
-            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-            
-            if (!data || !data.landmarks) return;
-            
-            try {
-                // Draw ring finger segments
-                overlayCtx.strokeStyle = '#00ff00';
-                overlayCtx.lineWidth = 3;
-                
-                const landmarks = data.landmarks;
-                overlayCtx.beginPath();
-                // Draw MCP to PIP
-                overlayCtx.moveTo(landmarks[13].x, landmarks[13].y);
-                overlayCtx.lineTo(landmarks[14].x, landmarks[14].y);
-                // Draw PIP to DIP
-                overlayCtx.lineTo(landmarks[15].x, landmarks[15].y);
-                // Draw DIP to TIP
-                overlayCtx.lineTo(landmarks[16].x, landmarks[16].y);
-                overlayCtx.stroke();
-                
-                // Draw points
-                overlayCtx.fillStyle = '#ff0000';
-                [13, 14, 15, 16].forEach(index => {
-                    overlayCtx.beginPath();
-                    overlayCtx.arc(landmarks[index].x, landmarks[index].y, 5, 0, 2 * Math.PI);
-                    overlayCtx.fill();
-                });
-            } catch (error) {
-                console.error('Error drawing landmarks:', error);
-            }
+    function drawLandmarks(data) {
+        if (!overlayCtx || !overlayCanvas) {
+            console.error('Overlay canvas not initialized');
+            return;
         }
 
-        async function captureFrameAndPredict() {
-            try {
-                if (!video.srcObject || isStabilized) return;
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        
+        if (!data || !data.landmarks) return;
+        
+        try {
+            // Draw ring finger segments with improved styling
+            overlayCtx.strokeStyle = 'rgba(42, 82, 152, 0.8)';
+            overlayCtx.lineWidth = 4;
+            
+            const landmarks = data.landmarks;
+            overlayCtx.beginPath();
+            // Draw MCP to PIP
+            overlayCtx.moveTo(landmarks[13].x, landmarks[13].y);
+            overlayCtx.lineTo(landmarks[14].x, landmarks[14].y);
+            // Draw PIP to DIP
+            overlayCtx.lineTo(landmarks[15].x, landmarks[15].y);
+            // Draw DIP to TIP
+            overlayCtx.lineTo(landmarks[16].x, landmarks[16].y);
+            overlayCtx.stroke();
+            
+            // Draw points with gradient
+            [13, 14, 15, 16].forEach(index => {
+                // Create gradient fill for points
+                const gradient = overlayCtx.createRadialGradient(
+                    landmarks[index].x, landmarks[index].y, 0,
+                    landmarks[index].x, landmarks[index].y, 8
+                );
+                gradient.addColorStop(0, 'rgba(30, 60, 114, 1)');
+                gradient.addColorStop(1, 'rgba(42, 82, 152, 0.6)');
                 
-                overlayCanvas.width = video.videoWidth;
-                overlayCanvas.height = video.videoHeight;
+                overlayCtx.fillStyle = gradient;
+                overlayCtx.beginPath();
+                overlayCtx.arc(landmarks[index].x, landmarks[index].y, 8, 0, 2 * Math.PI);
+                overlayCtx.fill();
                 
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                // Add white center for better visibility
+                overlayCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                overlayCtx.beginPath();
+                overlayCtx.arc(landmarks[index].x, landmarks[index].y, 3, 0, 2 * Math.PI);
+                overlayCtx.fill();
+            });
+        } catch (error) {
+            console.error('Error drawing landmarks:', error);
+        }
+    }
 
-                let imageData = canvas.toDataURL('image/jpeg', 0.8);
+    async function captureFrameAndPredict() {
+        try {
+            if (!video.srcObject || isStabilized) return;
+            
+            overlayCanvas.width = video.videoWidth;
+            overlayCanvas.height = video.videoHeight;
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                const response = await fetch('/predict-ring-size/', {
-                    method: 'POST',
-                    body: new URLSearchParams({
-                        'image': imageData,
-                        'continuous': 'true'
-                    }),
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
+            let imageData = canvas.toDataURL('image/jpeg', 0.8);
 
-                const data = await response.json();
-
-                if (data.error) {
-                    if (data.error.includes("No hand detected")) {
-                        statusText.textContent = "Please show your hand clearly";
-                        statusText.className = 'error';
-                        measurements = [];
-                        isStabilized = false;
-                        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-                        return;
-                    }
-                    throw new Error(data.error);
+            const response = await fetch('/predict-ring-size/', {
+                method: 'POST',
+                body: new URLSearchParams({
+                    'image': imageData,
+                    'continuous': 'true'
+                }),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
+            });
 
-                // Draw landmarks if available
-                if (data.landmarks) {
-                    drawLandmarks(data);
+            const data = await response.json();
+
+            if (data.error) {
+                if (data.error.includes("No hand detected")) {
+                    statusText.textContent = "Please show your hand clearly";
+                    statusText.className = 'error';
+                    measurements = [];
+                    isStabilized = false;
+                    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                    return;
                 }
+                throw new Error(data.error);
+            }
 
-                const currentMeasurement = parseFloat(data.measurement);
-                
-                // Add new measurement
-                measurements.push({
-                    size: data.ring_size,
-                    measurement: currentMeasurement
-                });
+            // Draw landmarks if available
+            if (data.landmarks) {
+                drawLandmarks(data);
+            }
 
-                // Keep only the last REQUIRED_STABLE_MEASUREMENTS
-                if (measurements.length > REQUIRED_STABLE_MEASUREMENTS) {
-                    measurements.shift();
-                }
+            const currentMeasurement = parseFloat(data.measurement);
+            
+            // Add new measurement
+            measurements.push({
+                size: data.ring_size,
+                measurement: currentMeasurement
+            });
 
-                // Check stability when we have enough measurements
-                if (measurements.length === REQUIRED_STABLE_MEASUREMENTS) {
-                    const values = measurements.map(m => m.measurement);
-                    const avg = values.reduce((a, b) => a + b) / values.length;
-                    const maxDeviation = Math.max(...values.map(v => Math.abs(v - avg)));
+            // Keep only the last REQUIRED_STABLE_MEASUREMENTS
+            if (measurements.length > REQUIRED_STABLE_MEASUREMENTS) {
+                measurements.shift();
+            }
 
-                    if (maxDeviation < STABILITY_THRESHOLD) {
-                        // We have a stable measurement
-                        isStabilized = true;
-                        finalMeasurement = {
-                            size: getMostFrequentSize(measurements),
-                            measurement: avg
-                        };
+            // Check stability when we have enough measurements
+            if (measurements.length === REQUIRED_STABLE_MEASUREMENTS) {
+                const values = measurements.map(m => m.measurement);
+                const avg = values.reduce((a, b) => a + b) / values.length;
+                const maxDeviation = Math.max(...values.map(v => Math.abs(v - avg)));
 
-                        ringSizeText.textContent = `Final Ring Size: ${finalMeasurement.size}`;
-                        measurementText.textContent = `Final Measurement: ${finalMeasurement.measurement.toFixed(1)}mm`;
-                        statusText.textContent = "✓ Measurement Complete!";
-                        statusText.className = 'success';
-                        
-                        // Add recapture button
-                        addRecaptureButton();
-                    } else {
-                        // Still unstable
-                        statusText.textContent = `Stabilizing measurement... (${maxDeviation.toFixed(1)}mm variance)`;
-                        ringSizeText.textContent = `Current Size: ${data.ring_size}`;
-                        measurementText.textContent = `Current: ${currentMeasurement.toFixed(1)}mm`;
-                    }
+                if (maxDeviation < STABILITY_THRESHOLD) {
+                    // We have a stable measurement
+                    isStabilized = true;
+                    finalMeasurement = {
+                        size: getMostFrequentSize(measurements),
+                        measurement: avg
+                    };
+
+                    ringSizeText.textContent = `Final Ring Size: ${finalMeasurement.size}`;
+                    measurementText.textContent = `Final Measurement: ${finalMeasurement.measurement.toFixed(1)}mm`;
+                    statusText.textContent = "✓ Measurement Complete!";
+                    statusText.className = 'success';
+                    
+                    // Add recapture button
+                    addRecaptureButton();
                 } else {
-                    // Still collecting measurements
-                    statusText.textContent = `Collecting measurements... (${measurements.length}/${REQUIRED_STABLE_MEASUREMENTS})`;
+                    // Still unstable
+                    statusText.textContent = `Stabilizing measurement... (${maxDeviation.toFixed(1)}mm variance)`;
                     ringSizeText.textContent = `Current Size: ${data.ring_size}`;
                     measurementText.textContent = `Current: ${currentMeasurement.toFixed(1)}mm`;
                 }
-
-            } catch (error) {
-                console.error("Error:", error);
-                statusText.textContent = "Error: " + (error.message || "Failed to process image");
-                statusText.className = 'error';
-                measurements = [];
+            } else {
+                // Still collecting measurements
+                statusText.textContent = `Collecting measurements... (${measurements.length}/${REQUIRED_STABLE_MEASUREMENTS})`;
+                ringSizeText.textContent = `Current Size: ${data.ring_size}`;
+                measurementText.textContent = `Current: ${currentMeasurement.toFixed(1)}mm`;
             }
-        }
 
-        function getMostFrequentSize(measurements) {
-            const sizeCounts = {};
-            measurements.forEach(m => {
-                sizeCounts[m.size] = (sizeCounts[m.size] || 0) + 1;
-            });
-            return Object.entries(sizeCounts)
-                .reduce((a, b) => a[1] > b[1] ? a : b)[0];
-        }
-
-        function addRecaptureButton() {
-            const recaptureBtn = document.createElement('button');
-            recaptureBtn.textContent = 'Measure Again';
-            recaptureBtn.onclick = () => {
-                measurements = [];
-                isStabilized = false;
-                finalMeasurement = null;
-                statusText.textContent = "Ready for new measurement...";
-                ringSizeText.textContent = "Ring Size: --";
-                measurementText.textContent = "Measurement: --";
-                recaptureBtn.remove();
-            };
-            captureButton.parentNode.insertBefore(recaptureBtn, captureButton.nextSibling);
-            captureButton.style.display = 'none';
-        }
-
-        // Update the measurement interval
-        navigator.mediaDevices.getUserMedia({
-            video: {
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-                facingMode: 'user'
-            }
-        })
-        .then(stream => {
-            video.srcObject = stream;
-            video.play();
-            setInterval(captureFrameAndPredict, MEASUREMENT_INTERVAL);
-        })
-        .catch(err => {
-            console.error("Error accessing webcam:", err);
-            statusText.textContent = "Error: Could not access webcam";
+        } catch (error) {
+            console.error("Error:", error);
+            statusText.textContent = "Error: " + (error.message || "Failed to process image");
             statusText.className = 'error';
-        });
+            measurements = [];
+        }
+    }
 
-        // Keep the manual capture button for single measurements
-        captureButton.addEventListener('click', async () => {
-            loadingText.style.display = 'block';
-            captureButton.disabled = true;
-            
-            try {
-                await captureFrameAndPredict();
-                statusText.textContent = "Manual measurement taken!";
-            } finally {
-                loadingText.style.display = 'none';
-                captureButton.disabled = false;
-            }
+    function getMostFrequentSize(measurements) {
+        const sizeCounts = {};
+        measurements.forEach(m => {
+            sizeCounts[m.size] = (sizeCounts[m.size] || 0) + 1;
         });
+        return Object.entries(sizeCounts)
+            .reduce((a, b) => a[1] > b[1] ? a : b)[0];
+    }
 
-        // Update the video loadedmetadata event handler
-        video.addEventListener('loadedmetadata', () => {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            overlayCanvas.width = video.videoWidth;
-            overlayCanvas.height = video.videoHeight;
-        });
-    </script>
-</body>
-</html>
+    function addRecaptureButton() {
+        const recaptureBtn = document.createElement('button');
+        recaptureBtn.textContent = 'Measure Again';
+        recaptureBtn.onclick = () => {
+            measurements = [];
+            isStabilized = false;
+            finalMeasurement = null;
+            statusText.textContent = "Ready for new measurement...";
+            ringSizeText.textContent = "Ring Size: --";
+            measurementText.textContent = "Measurement: --";
+            recaptureBtn.remove();
+            captureButton.style.display = 'inline-block';
+        };
+        captureButton.parentNode.insertBefore(recaptureBtn, captureButton.nextSibling);
+        captureButton.style.display = 'none';
+    }
 
+    // Update the measurement interval
+    navigator.mediaDevices.getUserMedia({
+        video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user'
+        }
+    })
+    .then(stream => {
+        video.srcObject = stream;
+        video.play();
+        setInterval(captureFrameAndPredict, MEASUREMENT_INTERVAL);
+    })
+    .catch(err => {
+        console.error("Error accessing webcam:", err);
+        statusText.textContent = "Error: Could not access webcam";
+        statusText.className = 'error';
+    });
+
+    // Keep the manual capture button for single measurements
+    captureButton.addEventListener('click', async () => {
+        loadingText.style.display = 'block';
+        captureButton.disabled = true;
+        
+        try {
+            await captureFrameAndPredict();
+            statusText.textContent = "Manual measurement taken!";
+        } finally {
+            loadingText.style.display = 'none';
+            captureButton.disabled = false;
+        }
+    });
+
+    // Update the video loadedmetadata event handler
+    video.addEventListener('loadedmetadata', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        overlayCanvas.width = video.videoWidth;
+        overlayCanvas.height = video.videoHeight;
+    });
+</script>
 {% endblock %}

@@ -5,106 +5,473 @@
   Ring Collection
 {% endblock title %}
 {% block content %}
+<style>
+    .container-fluid {
+        padding: 30px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+    }
 
-    <!-- Sidebar Filter Section -->
-    <div class="filters">
-        <h4>Filter by</h4>
-        <form method="get" action="{% url 'ring_list' %}">
-            <!-- Ring Size Filter -->
-            <div>
-                <h3>Ring Size:</h3>
-                {% for size in ring_sizes %}
-                    <label>
-                        <input type="checkbox" name="ring_size" value="{{ size }}"
-                            {% if size in selected_ring_sizes %}checked{% endif %}>
-                        {{ size }}
-                    </label><br>
-                {% endfor %}
-            </div>
-    
-            <br>
-            <!-- Ring Type Filter -->
-            <div>
-                <h3>Ring Type:</h3>
-                {% for type in ring_types %}
-                    <label>
-                        <input type="checkbox" name="ring_type" value="{{ type }}"
-                            {% if type in selected_ring_types %}checked{% endif %}>
-                        {{ type }}
-                    </label><br>
-                {% endfor %}
-            </div>
-    
-            <br>
-            <!-- Gemstone Filter -->
-            <div>
-                <h3>Gemstone:</h3>
-                {% for gem in gemstones %}
-                    <label>
-                        <input type="checkbox" name="stone_type" value="{{ gem }}"
-                            {% if gem in selected_gemstones %}checked{% endif %}>
-                        {{ gem }}
-                    </label><br>
-                {% endfor %}
-            </div>
-    
-            <br>
-            <!-- Material Type Filter -->
-            <div>
-                <h3>Material Type:</h3>
-                {% for mat in materials %}
-                    <label>
-                        <input type="checkbox" name="metal_type" value="{{ mat }}"
-                            {% if mat in selected_materials %}checked{% endif %}>
-                        {{ mat }}
-                    </label><br>
-                {% endfor %}
-            </div>
-    
-            <button type="submit">Filter</button>
-            <button type="button" class="button" onclick="window.location.href='/ring_list/'">Clear Filters</button>
-        </form>
-    </div>
+    /* Sidebar Filter Section */
+    .filters {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        position: fixed;
+        height: calc(100vh - 60px);
+        overflow-y: auto;
+        width: 22%;
+        box-shadow: 5px 0 30px rgba(0, 0, 0, 0.05);
+    }
 
-    <!-- Find Your Ring Size Button -->
-    <div class="text-center mt-4">
-        <button type="button" class="btn btn-primary" onclick="window.location.href='/find_ring_size/'">Find Your Ring Size</button>
-    </div>
-    
-    <!-- Main Product List Section -->
-    <div class="product-list">
-        <h2>Rings Collection</h2>
-        <div class="row">
-            {% if rings %}
-                {% for ring in rings %}
-                    <div class="product" data-ringsize="{{ ring.ring_size }}" data-ringtype="{{ ring.ring_type }}" data-gemstone="{{ ring.stone_type }}" data-material="{{ ring.metal_type }}">
-                        {% if ring.images %}
-                        <img src="{{ ring.images.url }}" alt="{{ ring.product_name }}">
-                        {% else %}
-                        <img src="{% static 'default_image.jpg' %}" alt="No Image Available">
-                        {% endif %}
-                        <h5>{{ ring.product_name }}</h5>
-                        <p><strong>Price:</strong> Rs:{{ ring.price }}</p>
-                        <a href="{% url 'ring_detail' ring.product_id %}" class="button">View Details</a>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-center">No rings available at the moment.</p>
-            {% endif %}
-        </div>
-    </div>
-    
-    <style>
-        .circle-placeholder {
-            width: 200px;
-            height: 200px;
-            background-color: #f0f0f0;
-            border-radius: 50%;
-            margin: 10px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+    .filters h4 {
+        color: #2d3436;
+        font-weight: 600;
+        margin-bottom: 25px;
+        font-size: 1.3rem;
+        letter-spacing: 0.5px;
+    }
+
+    .filters h3 {
+        color: #2d3436;
+        font-weight: 600;
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+        letter-spacing: 0.5px;
+    }
+
+    .filters label {
+        display: block;
+        margin-bottom: 15px;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .filters label:hover {
+        color: #4a90e2;
+        transform: translateX(5px);
+    }
+
+    /* Custom Checkbox Styling */
+    .filters input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #4a90e2;
+        border-radius: 5px;
+        margin-right: 10px;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .filters input[type="checkbox"]:checked {
+        background-color: #4a90e2;
+    }
+
+    .filters input[type="checkbox"]:checked::after {
+        content: '✓';
+        color: white;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 12px;
+    }
+
+    /* Main Product List Section */
+    .product-list {
+        margin-left: 24%;
+        padding: 0 20px;
+    }
+
+    .product-list h2 {
+        color: #2d3436;
+        font-size: 2rem;
+        margin-bottom: 30px;
+        font-weight: 600;
+    }
+
+    .product {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        margin-bottom: 30px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .product:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .product-image-container {
+        position: relative;
+        padding-top: 100%;
+        overflow: hidden;
+        background: #f8f9fa;
+    }
+
+    .product img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .product:hover img {
+        transform: scale(1.1) rotate(2deg);
+    }
+
+    .product-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+    }
+
+    .product:hover .product-overlay {
+        opacity: 1;
+    }
+
+    .product-info {
+        padding: 20px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background: white;
+        position: relative;
+        z-index: 1;
+    }
+
+    .product h5 {
+        margin: 0 0 10px 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2d3436;
+        line-height: 1.4;
+        transition: color 0.3s ease;
+    }
+
+    .product:hover h5 {
+        color: #4a90e2;
+    }
+
+    .product-price {
+        margin: 0 0 15px 0;
+        color: #e44d26;
+        font-size: 1.3rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .product-price strong {
+        font-size: 1rem;
+        color: #666;
+    }
+
+    .product-meta {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+    .product-tag {
+        background: #f8f9fa;
+        color: #666;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+    }
+
+    .product:hover .product-tag {
+        background: #e3f2fd;
+        color: #4a90e2;
+    }
+
+    .button {
+        display: inline-block;
+        padding: 12px 25px;
+        background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        text-align: center;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent
+        );
+        transition: 0.5s;
+    }
+
+    .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+        text-decoration: none;
+        color: white;
+    }
+
+    .button:hover::before {
+        left: 100%;
+    }
+
+    .button:active {
+        transform: translateY(0);
+    }
+
+    /* Product Card Animation */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
         }
-    </style>
-    
-    {% endblock content %}
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .product {
+        animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    /* Find Ring Size Button */
+    .ring-size-btn-container {
+        margin-left: 24%;
+        padding: 0 20px;
+        margin-bottom: 20px;
+    }
+
+    .ring-size-btn {
+        padding: 12px 25px;
+        background: linear-gradient(135deg, #6a3093 0%, #a044ff 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .ring-size-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(160, 68, 255, 0.3);
+        text-decoration: none;
+        color: white;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .filters {
+            width: 25%;
+        }
+        .product-list {
+            margin-left: 27%;
+        }
+        .ring-size-btn-container {
+            margin-left: 27%;
+        }
+    }
+
+    @media (max-width: 992px) {
+        .filters {
+            width: 30%;
+        }
+        .product-list {
+            margin-left: 32%;
+        }
+        .ring-size-btn-container {
+            margin-left: 32%;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding: 15px;
+        }
+        .filters {
+            display: none;
+        }
+        .product-list {
+            margin-left: 0;
+        }
+        .ring-size-btn-container {
+            margin-left: 0;
+            text-align: center;
+        }
+        .product-image-container {
+            padding-top: 75%;
+        }
+        .product-info {
+            padding: 15px;
+        }
+        .product h5 {
+            font-size: 1.1rem;
+        }
+        .product-price {
+            font-size: 1.2rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .product {
+            margin-bottom: 20px;
+        }
+        .product h5 {
+            font-size: 1rem;
+        }
+        .product-price {
+            font-size: 1.1rem;
+        }
+        .product-tag {
+            font-size: 0.8rem;
+            padding: 3px 10px;
+        }
+    }
+</style>
+
+<!-- Sidebar Filter Section -->
+<div class="filters">
+    <h4>Filter by</h4>
+    <form method="get" action="{% url 'ring_list' %}">
+        <!-- Ring Size Filter -->
+        <div>
+            <h3>Ring Size:</h3>
+            {% for size in ring_sizes %}
+                <label>
+                    <input type="checkbox" name="ring_size" value="{{ size }}"
+                        {% if size in selected_ring_sizes %}checked{% endif %}>
+                    {{ size }}
+                </label>
+            {% endfor %}
+        </div>
+
+        <!-- Ring Type Filter -->
+        <div>
+            <h3>Ring Type:</h3>
+            {% for type in ring_types %}
+                <label>
+                    <input type="checkbox" name="ring_type" value="{{ type }}"
+                        {% if type in selected_ring_types %}checked{% endif %}>
+                    {{ type }}
+                </label>
+            {% endfor %}
+        </div>
+
+        <!-- Gemstone Filter -->
+        <div>
+            <h3>Gemstone:</h3>
+            {% for gem in gemstones %}
+                <label>
+                    <input type="checkbox" name="stone_type" value="{{ gem }}"
+                        {% if gem in selected_gemstones %}checked{% endif %}>
+                    {{ gem }}
+                </label>
+            {% endfor %}
+        </div>
+
+        <!-- Material Type Filter -->
+        <div>
+            <h3>Material Type:</h3>
+            {% for mat in materials %}
+                <label>
+                    <input type="checkbox" name="metal_type" value="{{ mat }}"
+                        {% if mat in selected_materials %}checked{% endif %}>
+                    {{ mat }}
+                </label>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="button">Apply Filters</button>
+        <button type="button" class="button" onclick="window.location.href='/ring_list/'">Clear Filters</button>
+    </form>
+</div>
+
+<!-- Find Your Ring Size Button -->
+<div class="ring-size-btn-container">
+    <a href="{% url 'find_ring_size' %}" class="ring-size-btn">
+        <i class="fas fa-ruler-combined mr-2"></i> Find Your Ring Size
+    </a>
+</div>
+
+<!-- Main Product List Section -->
+<div class="product-list">
+    <h2>Rings Collection</h2>
+    <div class="row">
+        {% if rings %}
+            {% for ring in rings %}
+                <div class="col-md-4 col-sm-6 mb-4">
+                    <div class="product" data-ringsize="{{ ring.ring_size }}" data-ringtype="{{ ring.ring_type }}" data-gemstone="{{ ring.stone_type }}" data-material="{{ ring.metal_type }}">
+                        <div class="product-image-container">
+                            {% if ring.images %}
+                                <img src="{{ ring.images.url }}" alt="{{ ring.product_name }}">
+                            {% else %}
+                                <img src="{% static 'default_image.jpg' %}" alt="No Image Available">
+                            {% endif %}
+                            <div class="product-overlay">
+                                <a href="{% url 'ring_detail' ring.product_id %}" class="button">View Details</a>
+                            </div>
+                        </div>
+                        <div class="product-info">
+                            <h5>{{ ring.product_name }}</h5>
+                            <div class="product-meta">
+                                <span class="product-tag">{{ ring.ring_type }}</span>
+                                <span class="product-tag">{{ ring.metal_type }}</span>
+                            </div>
+                            <div class="product-price">
+                                <strong>Price:</strong> ₹{{ ring.price }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-center">No rings available at the moment.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}
