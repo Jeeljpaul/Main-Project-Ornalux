@@ -2,76 +2,86 @@
 {% include 'user/trial.html' %}
 
 {% block content %}
+
+
 <div class="container mt-4">
-    <h2 class="text-center text-primary mb-4">Update Profile</h2>
-    <form method="POST" id="updateProfileForm" class="shadow p-4 bg-white rounded">
+    <h2 class="text-center mb-4 page-title">Update Profile</h2>
+    <form method="POST" id="updateProfileForm" class="shadow p-4 bg-white rounded form-container">
         {% csrf_token %}
         <div class="form-group">
             <label for="name" class="font-weight-bold">Name</label>
-            <input type="text" class="form-control" id="name" name="name" value="{{ user.name }}" readonly>
+            <input type="text" class="form-control input-field" id="name" name="name" value="{{ user.name }}" readonly>
         </div>
 
         <div class="form-group">
             <label for="dob" class="font-weight-bold">Date of Birth</label>
-            <input type="text" class="form-control" id="dob" value="{{ user.dob }}" readonly>
+            <input type="text" class="form-control input-field" id="dob" value="{{ user.dob }}" readonly>
         </div>
 
         <div class="form-group">
             <label for="phone" class="font-weight-bold">Phone</label>
-            <input type="text" class="form-control" id="phone" name="phone" value="{{ user.phone }}" required>
+            <input type="text" class="form-control input-field" id="phone" name="phone" value="{{ user.phone }}" required>
         </div>
 
         <div class="form-group">
             <label for="email" class="font-weight-bold">Email</label>
-            <input type="email" class="form-control" id="email" name="email" value="{{ user.login.email }}" required> 
-            <a href="#" id="verifyEmailLink" class="text-primary mt-2 d-block">Verify Email</a>
+            <input type="email" class="form-control input-field" id="email" name="email" value="{{ user.login.email }}" required> 
+            <a href="#" id="verifyEmailLink" class="verify-link">Verify Email</a>
         </div>
 
-        <h3 class="text-secondary mt-4">Address Details</h3>
+        <h3 class="section-title mt-4">Address Details</h3>
         {% for address in addresses %}
-        <div class="card shadow-sm p-3 mb-3">
+        <div class="card shadow-sm p-3 mb-3 address-card">
             <input type="hidden" name="address_id_{{ forloop.counter }}" value="{{ address.id }}">
             <div class="form-group">
                 <label for="house_name_{{ forloop.counter }}" class="font-weight-bold">House Name</label>
-                <input type="text" class="form-control" id="house_name_{{ forloop.counter }}" name="house_name_{{ forloop.counter }}" value="{{ address.house_name }}" required>
+                <input type="text" class="form-control input-field" id="house_name_{{ forloop.counter }}" name="house_name_{{ forloop.counter }}" value="{{ address.house_name }}" required>
             </div>
             <div class="form-group">
                 <label for="postal_address_{{ forloop.counter }}" class="font-weight-bold">Postal Address</label>
-                <textarea class="form-control" id="postal_address_{{ forloop.counter }}" name="postal_address_{{ forloop.counter }}" required>{{ address.postal_address }}</textarea>
+                <textarea class="form-control input-field" id="postal_address_{{ forloop.counter }}" name="postal_address_{{ forloop.counter }}" required>{{ address.postal_address }}</textarea>
             </div>
             <div class="form-group">
                 <label for="city_{{ forloop.counter }}" class="font-weight-bold">City</label>
-                <input type="text" class="form-control" id="city_{{ forloop.counter }}" name="city_{{ forloop.counter }}" value="{{ address.city }}" required>
+                <input type="text" class="form-control input-field" id="city_{{ forloop.counter }}" name="city_{{ forloop.counter }}" value="{{ address.city }}" required>
             </div>
             <div class="form-group">
                 <label for="district_{{ forloop.counter }}" class="font-weight-bold">District</label>
-                <input type="text" class="form-control" id="district_{{ forloop.counter }}" name="district_{{ forloop.counter }}" value="{{ address.district }}" required>
+                <input type="text" class="form-control input-field" id="district_{{ forloop.counter }}" name="district_{{ forloop.counter }}" value="{{ address.district }}" required>
             </div>
             <div class="form-group">
                 <label for="state_{{ forloop.counter }}" class="font-weight-bold">State</label>
-                <input type="text" class="form-control" id="state_{{ forloop.counter }}" name="state_{{ forloop.counter }}" value="{{ address.state }}" required>
+                <input type="text" class="form-control input-field" id="state_{{ forloop.counter }}" name="state_{{ forloop.counter }}" value="{{ address.state }}" required>
             </div>
             <div class="form-group">
                 <label for="pincode_{{ forloop.counter }}" class="font-weight-bold">Pincode</label>
-                <input type="text" class="form-control" id="pincode_{{ forloop.counter }}" name="pincode_{{ forloop.counter }}" value="{{ address.pincode }}" required>
+                <input type="text" class="form-control input-field" id="pincode_{{ forloop.counter }}" name="pincode_{{ forloop.counter }}" value="{{ address.pincode }}" required>
             </div>
         </div>
         {% empty %}
         <p class="text-danger">No address found. Please add a new address from your profile page.</p>
         {% endfor %}
 
-        <button type="submit" id="saveButton" class="btn btn-success btn-block mt-4" disabled>Save Changes</button>
+        <div class="button-group mt-4">
+            <button type="submit" id="saveButton" class="btn btn-success save-button" disabled>Save Changes</button>
+            <a href="{% url 'profile' %}" class="btn btn-secondary cancel-button">Cancel</a>
+        </div>
     </form>
 </div>
 
 <!-- OTP Popup -->
-<div id="otpPopup" style="display: none;" class="popup shadow p-4 bg-white rounded">
-    <h5>Enter the OTP sent to your email</h5>
-    <input type="text" class="form-control mt-2" id="otp" maxlength="6" placeholder="Enter OTP">
+<div id="otpPopup" class="popup shadow p-4 bg-white rounded">
+    <h5 class="popup-title">Enter the OTP sent to your email</h5>
+    <input type="text" class="form-control mt-2 otp-input" id="otp" maxlength="6" placeholder="Enter OTP">
     <small id="otpMessage" class="text-muted d-block mt-2"></small>
-    <button type="button" class="btn btn-primary mt-3" id="verifyOtpButton">Verify OTP</button>
-    <button type="button" class="btn btn-secondary mt-3" id="closePopup">Cancel</button>
+    <div class="popup-buttons">
+        <button type="button" class="btn btn-primary mt-3" id="verifyOtpButton">Verify OTP</button>
+        <button type="button" class="btn btn-secondary mt-3" id="closePopup">Cancel</button>
+    </div>
 </div>
+
+<!-- Overlay for popup -->
+<div id="overlay" class="overlay"></div>
 
 <!-- Validation Scripts -->
 <script>
@@ -80,6 +90,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const emailField = document.getElementById('email');
     const verifyEmailLink = document.getElementById('verifyEmailLink');
     const otpPopup = document.getElementById('otpPopup');
+    const overlay = document.getElementById('overlay');
     const otpField = document.getElementById('otp');
     const verifyOtpButton = document.getElementById('verifyOtpButton');
     const closePopup = document.getElementById('closePopup');
@@ -116,7 +127,8 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(data => {
             if (data.status === 'success') {
                 alert("OTP sent to " + email);
-                document.getElementById('otpPopup').style.display = 'block'; // Show the OTP popup
+                otpPopup.style.display = 'block';
+                overlay.style.display = 'block';
             } else {
                 alert(data.message);
             }
@@ -145,7 +157,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 otpMessage.style.color = 'green';
                 otpVerified = true;
                 saveButton.disabled = false;
-                otpPopup.style.display = 'none';
+                setTimeout(() => {
+                    otpPopup.style.display = 'none';
+                    overlay.style.display = 'none';
+                }, 1500);
             } else {
                 otpMessage.textContent = data.message;
                 otpMessage.style.color = 'red';
@@ -160,6 +175,13 @@ document.addEventListener("DOMContentLoaded", function () {
     // Close OTP Popup
     closePopup.addEventListener('click', function() {
         otpPopup.style.display = 'none';
+        overlay.style.display = 'none';
+    });
+    
+    // Close popup when clicking outside
+    overlay.addEventListener('click', function() {
+        otpPopup.style.display = 'none';
+        overlay.style.display = 'none';
     });
 
     // Prevent form submission if OTP not verified
@@ -169,15 +191,273 @@ document.addEventListener("DOMContentLoaded", function () {
             e.preventDefault();
         }
     });
+    
+    // Add animation class to form fields on focus
+    const inputFields = document.querySelectorAll('.input-field');
+    inputFields.forEach(field => {
+        field.addEventListener('focus', function() {
+            this.parentElement.classList.add('active-field');
+        });
+        field.addEventListener('blur', function() {
+            this.parentElement.classList.remove('active-field');
+        });
+    });
 });
 </script>
 
 <style>
     body {
-        background-color: #f8f9fa;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+    
     .container {
         max-width: 800px;
+        margin-top: 2rem;
+    }
+    
+    .page-title {
+        color: #3a7bd5;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        position: relative;
+        padding-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .page-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 3px;
+        background: linear-gradient(90deg, #3a7bd5, #00d2ff);
+        border-radius: 3px;
+    }
+    
+    .form-container {
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .form-container:hover {
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px);
+    }
+    
+    .input-field {
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        padding: 10px 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .input-field:focus {
+        border-color: #3a7bd5;
+        box-shadow: 0 0 0 3px rgba(58, 123, 213, 0.2);
+    }
+    
+    .input-field:hover:not(:focus) {
+        border-color: #c0c0c0;
+    }
+    
+    .verify-link {
+        color: #3a7bd5;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 5px;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .verify-link:after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        bottom: -2px;
+        left: 0;
+        background-color: #3a7bd5;
+        transition: width 0.3s ease;
+    }
+    
+    .verify-link:hover:after {
+        width: 100%;
+    }
+    
+    .section-title {
+        color: #555;
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .address-card {
+        border-radius: 12px;
+        border: none;
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+        background-color: #f9f9f9;
+    }
+    
+    .address-card:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        transform: translateY(-3px);
+        background-color: #fff;
+    }
+    
+    .button-group {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+    }
+    
+    .save-button, .cancel-button {
+        flex: 1;
+        max-width: 200px;
+        border-radius: 30px;
+        padding: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+        text-align: center;
+        text-decoration: none;
+    }
+    
+    .save-button {
+        background: linear-gradient(90deg, #3a7bd5, #00d2ff);
+        border: none;
+        box-shadow: 0 5px 15px rgba(0, 126, 255, 0.2);
+    }
+    
+    .cancel-button {
+        background: linear-gradient(90deg, #6c757d, #495057);
+        border: none;
+        box-shadow: 0 5px 15px rgba(108, 117, 125, 0.2);
+    }
+    
+    .save-button:not([disabled]):hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 126, 255, 0.3);
+    }
+    
+    .cancel-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .save-button:not([disabled]):active,
+    .cancel-button:active {
+        transform: translateY(1px);
+    }
+    
+    .save-button[disabled] {
+        background: linear-gradient(90deg, #ccc, #ddd);
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+    
+    /* Popup Styling */
+    .overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    .popup {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1001;
+        width: 350px;
+        border-radius: 15px;
+        animation: slideIn 0.3s ease;
+    }
+    
+    .popup-title {
+        color: #3a7bd5;
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    
+    .otp-input {
+        font-size: 1.2rem;
+        letter-spacing: 5px;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .popup-buttons {
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .popup-buttons button {
+        flex: 1;
+        margin: 0 5px;
+        border-radius: 30px;
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+        from { 
+            opacity: 0;
+            transform: translate(-50%, -60%);
+        }
+        to { 
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .container {
+            padding: 0 15px;
+        }
+        
+        .popup {
+            width: 90%;
+            max-width: 350px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .button-group {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .save-button, .cancel-button {
+            width: 100%;
+            max-width: 100%;
+        }
     }
 </style>
 {% endblock %}

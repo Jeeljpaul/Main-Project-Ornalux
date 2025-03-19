@@ -8,6 +8,37 @@
         background-color: #f8f9fa;
     }
 
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        background: linear-gradient(90deg, #6a11cb, #2575fc);
+        color: white;
+        padding: 8px 15px;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(106, 17, 203, 0.2);
+    }
+
+    .back-button i {
+        margin-right: 8px;
+    }
+
+    .back-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(106, 17, 203, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+
     .order-info-card {
         background: white;
         border-radius: 15px;
@@ -20,6 +51,9 @@
         border-bottom: 2px solid #e9ecef;
         padding-bottom: 15px;
         margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .status-timeline {
@@ -102,9 +136,16 @@
 
 <div class="order-detail-container">
     <div class="container">
+        <div class="page-header">
+            <h2>Order Details</h2>
+            <a href="{% url 'order_history' %}" class="back-button">
+                <i class="fas fa-arrow-left"></i> Back to Orders
+            </a>
+        </div>
+        
         <div class="order-info-card">
             <div class="order-header">
-                <h2>Order Details</h2>
+                <h3>Order #{{ order.id }}</h3>
             </div>
             <div class="row">
                 <div class="col-md-6">
@@ -175,6 +216,12 @@
                     {% endif %}
                 </div>
             {% endfor %}
+        </div>
+        
+        <div class="text-center mt-4 mb-4">
+            <a href="{% url 'order_history' %}" class="back-button">
+                <i class="fas fa-arrow-left"></i> Back to Orders
+            </a>
         </div>
     </div>
 </div>
