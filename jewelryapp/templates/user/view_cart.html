@@ -22,98 +22,35 @@
     <link href="{% static 'fontawesome/css/all.min.css' %}" rel="stylesheet">
 
     <style>
+        /* Base styles */
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Poppins', sans-serif;
             margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4
+            padding: 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #2d3436;
+            min-height: 100vh;
         }
 
-        .product-details {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .product-details img {
-            max-width: 100%;
-            height: auto;
-            margin-bottom: 20px;
-        }
-
-        .product-info {
-            margin-bottom: 20px;
-        }
-
-        .product-info h3 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .product-info p {
-            margin: 5px 0;
-        }
-
-        .button {
-            display: inline-block;
-            padding: 10px 15px;
-            margin: 10px 5px;
-            font-size: 16px;
-            font-weight: bold;
-            color: white;
-            background-color: #007bff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            text-decoration: none;
-        }
-
-        .button:hover {
-            background-color: #0056b3;
-        }
-
-        .back-button {
-            background-color: #6c757d;
-        }
-
-        .back-button:hover {
-            background-color: #5a6268;
-        }
-
-        .wishlist-button {
-            background-color: #ffc107;
-        }
-
-        .wishlist-button:hover {
-            background-color: #e0a800;
-        }
-
+        /* Navbar styles */
         .navbar {
-        transition: top 0.3s;
-        }
-
-        /* Breadcrumb styling */
-        .breadcrumb-container {
-        margin-left: 70px; /* Align with the main content */
-        padding: 5px 0; /* Reduce padding to make it more minimal */
-        background-color: transparent; /* Remove the background color */
-        border: none; /* Remove any border */
-        box-shadow: none; /* Remove the shadow effect */
-        margin-top: 50px; /* Keep the spacing from the navbar */
-        font-size: 14px; /* Adjust the font size if necessary */
-        color: #6c757d; /* Set a subtle text color */
-    }
-
-        .navbar {
+            background: linear-gradient(to right, #1e3c72, #2a5298) !important;
+            padding: 15px 30px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
             transition: top 0.3s;
         }
 
-    
+        .navbar-brand {
+            font-size: 24px;
+            font-weight: 600;
+            color: #fff !important;
+            transition: transform 0.3s ease;
+        }
+        
+        .navbar-brand:hover {
+            transform: scale(1.05);
+        }
+
         /* Center and style the icons within the navigation */
         .nav-icon {
             display: flex;             /* Aligns items in a row */
@@ -122,17 +59,13 @@
             font-size: 1.5em;          /* Adjust the size of the icons */
             margin: 0 15px;            /* Space between the navigation items */
             padding: 8px;              /* Add some padding around the icons */
-            transition: color 0.3s, transform 0.2s; /* Smooth hover effects */
+            transition: all 0.3s ease; /* Smooth hover effects */
         }
 
         /* Change the icon color when hovered */
         .nav-icon:hover {
-            color: #f8b400;            /* Highlight color on hover (e.g., yellow or gold) */
+            color: #f8b400 !important;    /* Highlight color on hover (e.g., yellow or gold) */
             transform: scale(1.2);     /* Slightly increase the size on hover */
-        }
-
-        /* Add a subtle background effect on hover */
-        .nav-icon:hover {
             background-color: rgba(255, 255, 255, 0.1); /* Light background on hover */
             border-radius: 8px;        /* Rounded corners for a softer look */
         }
@@ -142,13 +75,496 @@
             margin-left: 20px;         /* Space between the items */
         }
 
+        /* Breadcrumb styles */
+        .breadcrumb-container {
+            margin: 80px auto 20px;
+            max-width: 1200px;
+            padding: 0 30px;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(-20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        .breadcrumb {
+            background: transparent;
+            padding: 10px 0;
+            margin: 0;
+            position: relative;
+        }
+        
+        .breadcrumb:after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #1e3c72, #2a5298);
+            transition: width 0.6s ease;
+        }
+        
+        .breadcrumb:hover:after {
+            width: 100%;
+        }
+        
+        .breadcrumb-item a {
+            color: #1e3c72;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .breadcrumb-item a:before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #1e3c72;
+            transition: width 0.3s ease;
+        }
+        
+        .breadcrumb-item a:hover {
+            color: #2a5298;
+            transform: translateY(-2px);
+        }
+        
+        .breadcrumb-item a:hover:before {
+            width: 100%;
+        }
+        
+        .breadcrumb-item.active {
+            color: #2d3436;
+            font-weight: 500;
+        }
 
+        /* Cart container styles */
+        .container {
+            max-width: 1200px;
+            margin: 80px auto 50px;
+            padding: 30px;
+            animation: slideUp 0.8s ease forwards;
+        }
+        
+        @keyframes slideUp {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        .container h2 {
+            color: #1e3c72;
+            font-weight: 700;
+            margin-bottom: 30px;
+            position: relative;
+            display: inline-block;
+            animation: fadeInLeft 0.6s ease forwards;
+        }
+        
+        @keyframes fadeInLeft {
+            0% { opacity: 0; transform: translateX(-30px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+        
+        .container h2:after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(90deg, #1e3c72, #2a5298);
+            transition: width 0.3s ease;
+        }
+        
+        .container h2:hover:after {
+            width: 100%;
+        }
+
+        /* Table styles */
+        .table {
+            background: #fff;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            border: none;
+            margin-top: 30px;
+            transition: all 0.3s ease;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .table:hover {
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+            transform: translateY(-5px);
+        }
+        
+        .thead-light {
+            background: linear-gradient(90deg, #1e3c72, #2a5298) !important;
+            color: white !important;
+        }
+        
+        .thead-light th {
+            color: white !important;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 20px !important;
+            border: none !important;
+            position: relative;
+            overflow: hidden;
+            font-size: 16px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        .table th:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .table th:hover:after {
+            transform: scaleX(1);
+        }
+        
+        .table td {
+            vertical-align: middle;
+            padding: 20px 15px;
+            border: none;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+        
+        .table tr {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .table tr:hover {
+            background-color: #f8f9fa;
+            transform: scale(1.01);
+            z-index: 2;
+        }
+        
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Product image styling */
+        .product-cell {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .product-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            object-fit: cover;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .product-image:hover {
+            transform: scale(1.08);
+            border-color: #1e3c72;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: #2d3436;
+            transition: all 0.3s ease;
+            margin: 0;
+        }
+
+        tr:hover .product-name {
+            color: #1e3c72;
+            transform: translateX(3px);
+        }
+
+        /* Price styling */
+        .price-cell {
+            font-weight: 600;
+            color: #2d3436;
+            position: relative;
+        }
+
+        .price-cell:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 3px;
+            height: 0;
+            background: linear-gradient(to bottom, #1e3c72, #2a5298);
+            transform: translateY(-50%);
+            transition: height 0.3s ease;
+            opacity: 0;
+        }
+
+        tr:hover .price-cell:before {
+            height: 60%;
+            opacity: 1;
+        }
+
+        /* Quantity controls styling */
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 160px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            border-radius: 50px;
+            padding: 5px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .btn-outline-secondary {
+            border-color: #1e3c72;
+            background: white;
+            color: #1e3c72;
+            transition: all 0.3s ease;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+            margin: 0 5px;
+        }
+
+        .btn-outline-secondary:hover {
+            background: #1e3c72;
+            color: white;
+            transform: scale(1.1) rotate(90deg);
+        }
+
+        .quantity-control input {
+            background: transparent;
+            border: none;
+            font-weight: 600;
+            font-size: 16px;
+            color: #2d3436;
+            width: 50px;
+            text-align: center;
+            padding: 0;
+            margin: 0 5px;
+        }
+
+        .quantity-control input:focus {
+            box-shadow: none;
+        }
+
+        /* Total price cell styling */
+        .total-cell {
+            font-weight: 700;
+            color: #ff4757;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .total-cell:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(to right, #ff4757, #ff6b81);
+            transition: width 0.3s ease;
+        }
+
+        tr:hover .total-cell:after {
+            width: 100%;
+        }
+
+        /* Remove button styling */
+        .btn-danger {
+            background: linear-gradient(45deg, #ff4757, #ff6b81);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(255, 71, 87, 0.2);
+            font-size: 14px;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(45deg, #ff3347, #ff5a72);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 15px rgba(255, 71, 87, 0.3);
+        }
+
+        .btn-danger i {
+            margin-right: 5px;
+        }
+
+        /* Empty state improvements */
+        .empty-cart {
+            text-align: center;
+            padding: 80px 30px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+            margin: 40px auto;
+            max-width: 800px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .empty-cart:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(to right, #1e3c72, #2a5298, #ff4757);
+        }
+
+        .empty-cart i {
+            font-size: 100px;
+            color: #e0e0e0;
+            margin-bottom: 30px;
+            display: block;
+            animation: float 3s ease infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+            100% { transform: translateY(0) rotate(0); }
+        }
+
+        .empty-cart p {
+            font-size: 24px;
+            color: #6c757d;
+            margin-bottom: 40px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin-top: 60px;
+            }
+            
+            .breadcrumb-container {
+                margin-top: 60px;
+            }
+            
+            .table {
+                margin-top: 20px;
+            }
+            
+            .table th, .table td {
+                padding: 15px 10px;
+            }
+            
+            .quantity-control {
+                max-width: 120px;
+            }
+            
+            .mt-4 {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .container h2 {
+                font-size: 24px;
+            }
+            
+            .table th, .table td {
+                padding: 10px 8px;
+                font-size: 14px;
+            }
+            
+            .btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+
+        /* Add this new section for improved table heading */
+        .table-heading-enhanced th {
+            color: rgb(15, 1, 46) !important;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            padding: 22px 20px !important;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .table-heading-enhanced th:last-child {
+            border-right: none;
+        }
+
+        .table-heading-enhanced th:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .table-heading-enhanced th:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), transparent);
+        }
+
+        /* Add new styling for table */
+        .readable-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+
+        .readable-table thead {
+            border-radius: 15px 15px 0 0;
+            overflow: hidden;
+        }
     </style>
 </head>
 
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-    <a class="navbar-brand" href="#">Ornalux</a>
+    <a class="navbar-brand" href="#">ORNALUX</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
@@ -156,44 +572,28 @@
         <ul class="navbar-nav ml-auto">
             <li class="nav-item"><a class="nav-link text-white nav-icon" href="/"><i class="fas fa-home" style="margin-right: 40px;"></i></a></li>
             <li class="nav-item"><a class="nav-link text-white nav-icon" href="{% url 'logout' %}"><i class="fas fa-sign-out"></i></a></li>
-            
-            <!-- <li class="nav-item">
-                <a class="nav-link text-white" href="/products">Products</a>
-            </li> -->
-            <!-- <li class="nav-item">
-                <a class="nav-link text-white" href="/about">About</a>
-            </li> -->
-            <!-- <li class="nav-item">
-                <a class="nav-link text-white" href="/contact">Contact</a>
-            </li> -->
-            <!-- <li class="nav-item">
-                <a class="nav-link text-white" href="/login">Login</a>
-            </li> -->
         </ul>
     </div>
 </nav>
 
 <!-- Breadcrumb Section -->
-<!-- <div class="breadcrumb-container">
+<div class="breadcrumb-container">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="/">Home</a></li>
-          <li class="breadcrumb-item"><a href="{% url 'bracelet_list' %}">Bracelet List</a></li>
-          <li class="breadcrumb-item active" aria-current="page">Details</li>
+          <li class="breadcrumb-item"><a href="{% url 'allproducts' %}">Collection</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Your Cart</li>
         </ol>
-      </nav>
-      
-</div> -->
-
-
-
+    </nav>
+</div>
 
 <body>
-    <div class="container mt-5">
+    <div class="container">
         <h2>Your Cart</h2>
+        
         {% if cart_items %}
-            <table class="table table-bordered mt-4">
-                <thead class="thead-light">
+            <table class="table table-bordered mt-4 readable-table">
+                <thead class="thead-light table-heading-enhanced">
                     <tr>
                         <th>Product</th>
                         <th>Price</th>
@@ -205,8 +605,13 @@
                 <tbody>
                     {% for item in cart_items %}
                         <tr>
-                            <td>{{ item.product.product_name }}</td>
-                            <td>Rs: {{ item.product.price }}</td>
+                            <td>
+                                <div class="product-cell">
+                                    <img src="{{ item.product.images.url }}" alt="{{ item.product.product_name }}" class="product-image">
+                                    <p class="product-name">{{ item.product.product_name }}</p>
+                                </div>
+                            </td>
+                            <td class="price-cell">Rs: {{ item.product.price }}</td>
                             <td>
                                 <div class="input-group quantity-control">
                                     <div class="input-group-prepend">
@@ -219,9 +624,9 @@
                                     </div>
                                 </div>
                             </td>
-                            <td>Rs: <span class="item-total">{{ item.total_price }}</span></td>
+                            <td class="total-cell">Rs: <span class="item-total">{{ item.total_price }}</span></td>
                             <td>  
-                                <button class="btn btn-danger btn-sm remove-item" data-product-id="{{ item.product.product_id }}">Remove</button>
+                                <button class="btn btn-danger btn-sm remove-item" data-product-id="{{ item.product.product_id }}"><i class="fas fa-trash-alt"></i> Remove</button>
                             </td>
                         </tr>
                     {% endfor %}
@@ -229,11 +634,20 @@
             </table>
             <h4 class="mt-3">Total Price: Rs: <span id="total-price">{{ total_price }}</span></h4>
         {% else %}
-            <p>Your cart is empty.</p>
+            <div class="empty-cart">
+                <i class="fas fa-shopping-cart"></i>
+                <p>Your cart is empty.</p>
+                <a href="{% url 'allproducts' %}" class="btn btn-primary">Browse Products</a>
+            </div>
         {% endif %}
+        
         <div class="mt-4">
-            <a href="#" class="btn btn-primary">Continue Shopping</a>
-            <a href="{% url 'address_view' %}" class="btn btn-success">Continue</a>
+            <a href="{% url 'allproducts' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Products</a>
+            
+            {% if cart_items %}
+            <a href="{% url 'allproducts' %}" class="btn btn-primary">Continue Shopping</a>
+            <a href="{% url 'address_view' %}" class="btn btn-success">Proceed to Checkout</a>
+            {% endif %}
         </div>
     </div>
 
@@ -293,12 +707,62 @@
                     // Remove the item row from the table and update the total price
                     $(`button[data-product-id="${productId}"]`).closest('tr').remove();
                     $('#total-price').text(response.new_total_price);
+                    
+                    // Check if the cart is now empty
+                    if (response.is_empty) {
+                        // Replace the table with empty cart message
+                        $('.table').replaceWith(`
+                            <div class="empty-cart">
+                                <i class="fas fa-shopping-cart"></i>
+                                <p>Your cart is empty.</p>
+                                <a href="{% url 'allproducts' %}" class="btn btn-primary">Browse Products</a>
+                            </div>
+                        `);
+                        
+                        // Hide the total price and checkout buttons
+                        $('h4.mt-3').hide();
+                        $('.mt-4 .btn-primary, .mt-4 .btn-success').hide();
+                    }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error removing item:', error);
                 }
             });
         }
+        
+        // Add animation to rows
+        $(document).ready(function() {
+            // Animate table rows
+            $('.table tbody tr').each(function(index) {
+                $(this).css({
+                    'animation': 'fadeIn 0.5s ease forwards',
+                    'animation-delay': (0.1 + index * 0.1) + 's',
+                    'opacity': '0'
+                });
+            });
+            
+            // Add hover zoom effect for product images
+            $('.product-image').hover(function() {
+                $(this).css('z-index', '10');
+            }, function() {
+                $(this).css('z-index', '1');
+            });
+            
+            // Shine effect on total price when changed
+            function animateTotalUpdate() {
+                $('#total-price').addClass('price-update');
+                setTimeout(function() {
+                    $('#total-price').removeClass('price-update');
+                }, 1000);
+            }
+            
+            // Add animation to the total price when it updates
+            const originalUpdateQuantity = window.updateQuantity;
+            window.updateQuantity = function(productId, change) {
+                originalUpdateQuantity(productId, change);
+                animateTotalUpdate();
+            };
+        });
     </script>
 </body>
 </html>
