@@ -916,7 +916,7 @@
                 </div>
 
                 <!-- Price Breakdown -->
-                <div class="price-breakdown">
+                <!-- <div class="price-breakdown">
                     <h4>Price Details</h4>
                     <table class="price-table">
                         <tr>
@@ -938,7 +938,7 @@
                             <td>₹{{ product.calculate_total_price|floatformat:2 }}</td>
                         </tr>
                     </table>
-                </div>
+                </div> -->
 
                 <!-- Metal Rates -->
                 <div class="metal-rates">
@@ -960,7 +960,7 @@
                         <li><strong>Weight:</strong> {{ product.weight }} grams</li>
                         {% if product.diamond_weight %}
                         <li><strong>Diamond Weight:</strong> {{ product.diamond_weight }} carats</li>
-                        <li><strong>Diamond Quality:</strong> {{ product.diamond_quality }}</li>
+                        <!-- <li><strong>Diamond Quality:</strong> {{ product.diamond_quality }}</li> -->
                         {% endif %}
                         <li><strong>Metal Type:</strong> {{ product.metaltype.name }}</li>
                         {% if product.stonetype %}
@@ -975,7 +975,7 @@
                     {% if product.try_at_home %}
                     <a href="{% url 'book_schedule' product.product_id %}" class="try-at-home-button">Try at Home</a>
                     {% endif %}
-                    <a href="{% url 'add_to_wishlist' product.product_id %}" class="add_to_wishlist">Add to Wishlist</a>
+                    <a href="{% url 'add_to_wishlist' product.product_id %}" class="add_to_wishlist" data-product-id="{{ product.product_id }}">Add to Wishlist</a>
 
                     <a href="{% url 'virtual_tryon' %}" class="virtual_tryon">Virtual Try On</a>
 
@@ -1171,6 +1171,34 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         $(document).ready(function() {
+            // Add to Cart functionality
+            $('.add_to_cart').click(function(e) {
+                e.preventDefault();
+                const productId = $(this).data('product-id');
+                const csrfToken = $('input[name=csrfmiddlewaretoken]').val();
+                
+                $.ajax({
+                    url: '/add_to_cart/' + productId + '/',
+                    type: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                            if (response.redirect) {
+                                window.location.href = response.redirect;
+                            }
+                        }
+                    },
+                    error: function() {
+                        alert('An error occurred while adding the item to the cart.');
+                    }
+                });
+            });
+
             // Add to wishlist functionality
             $('.add_to_wishlist').click(function(e) {
                 e.preventDefault();
