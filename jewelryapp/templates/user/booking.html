@@ -1,8 +1,6 @@
 {% load static %}
 {% include 'user/trial.html' %}
 
-
-
 {% block content %}
 <div class="breadcrumb-container">
     <nav aria-label="breadcrumb">
@@ -89,12 +87,21 @@
     </div>
 </div>
 
+{% endblock content %}
+
+{% block extra_css %}
 <style>
     /* General styling */
     .container {
         max-width: 1100px;
         margin: 0 auto;
         padding: 20px;
+        animation: fadeIn 0.6s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
     }
     
     /* Booking header styling */
@@ -104,6 +111,23 @@
         padding-bottom: 15px;
         border-bottom: 2px solid #f0f0f0;
         position: relative;
+        overflow: hidden;
+    }
+    
+    .booking-header:before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #6a11cb, #2575fc);
+        transition: all 0.8s ease;
+        transform: translateX(-50%);
+    }
+    
+    .booking-header:hover:before {
+        width: 100%;
     }
     
     .booking-header h2 {
@@ -113,7 +137,9 @@
         font-weight: 700;
         margin-left: 0;
         padding: 0;
-        transition: color 0.3s ease;
+        transition: all 0.5s ease;
+        position: relative;
+        display: inline-block;
     }
     
     .booking-header h2:after {
@@ -128,6 +154,11 @@
         transition: transform 0.5s ease;
     }
     
+    .booking-header:hover h2 {
+        transform: translateY(-5px);
+        text-shadow: 0 5px 15px rgba(106, 17, 203, 0.2);
+    }
+    
     .booking-header:hover h2:after {
         transform: scaleX(1.5);
     }
@@ -136,6 +167,14 @@
         color: #6c757d;
         font-size: 16px;
         margin-bottom: 0;
+        transition: all 0.5s ease;
+        position: relative;
+        display: inline-block;
+    }
+    
+    .booking-header:hover .booking-subtitle {
+        transform: scale(1.05);
+        color: #5a6268;
     }
     
     /* Stats section */
@@ -147,16 +186,61 @@
         background: linear-gradient(45deg, #f9f9f9, #f0f0f0);
         border-radius: 10px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.5s ease;
+    }
+    
+    .booking-stats:hover {
+        box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        transform: translateY(-7px);
+        background: linear-gradient(45deg, #f5f5f5, #e8e8e8);
+    }
+    
+    .booking-stats:before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+        opacity: 0;
+        transform: scale(0.5);
+        transition: all 0.8s ease;
+    }
+    
+    .booking-stats:hover:before {
+        opacity: 1;
+        transform: scale(1);
     }
     
     .stat-item {
         text-align: center;
         padding: 10px 20px;
-        transition: transform 0.3s ease;
+        transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        z-index: 1;
     }
     
     .stat-item:hover {
-        transform: translateY(-5px);
+        transform: translateY(-8px) scale(1.05);
+    }
+    
+    .stat-item:after {
+        content: '';
+        position: absolute;
+        bottom: -5px;
+        left: 50%;
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #6a11cb, #2575fc);
+        transition: all 0.5s ease;
+        transform: translateX(-50%);
+    }
+    
+    .stat-item:hover:after {
+        width: 70%;
     }
     
     .stat-value {
@@ -164,6 +248,13 @@
         font-size: 24px;
         font-weight: bold;
         color: #333;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .stat-item:hover .stat-value {
+        color: #6a11cb;
+        text-shadow: 0 0 10px rgba(106, 17, 203, 0.3);
     }
     
     .stat-label {
@@ -171,6 +262,11 @@
         font-size: 14px;
         color: #6c757d;
         margin-top: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .stat-item:hover .stat-label {
+        color: #4a4a4a;
     }
     
     /* Table container styling */
@@ -181,12 +277,40 @@
         background-color: #fff;
         border-radius: 12px;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        transition: box-shadow 0.3s ease, transform 0.3s ease;
+        transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        position: relative;
+        overflow: hidden;
+        animation: slideUp 0.8s ease forwards;
+        animation-delay: 0.2s;
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    
+    @keyframes slideUp {
+        0% { opacity: 0; transform: translateY(30px); }
+        100% { opacity: 1; transform: translateY(0); }
     }
     
     .table-container:hover {
-        box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
-        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        transform: translateY(-8px) scale(1.01);
+    }
+    
+    .table-container:after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 5px;
+        background: linear-gradient(90deg, #6a11cb, #2575fc);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+    
+    .table-container:hover:after {
+        transform: scaleX(1);
     }
     
     /* Table styling */
@@ -206,7 +330,7 @@
         border: none;
         position: relative;
         overflow: hidden;
-        transition: all 0.3s ease;
+        transition: all 0.4s ease;
     }
     
     .booking-table th:first-child {
@@ -226,7 +350,12 @@
         height: 2px;
         background: rgba(255, 255, 255, 0.5);
         transform: scaleX(0);
-        transition: transform 0.3s ease;
+        transition: transform 0.4s ease;
+    }
+    
+    .booking-table th:hover {
+        background: linear-gradient(90deg, #5a0cb1, #1e64d6);
+        transform: translateY(-2px);
     }
     
     .booking-table th:hover:after {
@@ -237,19 +366,52 @@
         padding: 15px;
         border-bottom: 1px solid #eee;
         vertical-align: middle;
-        transition: background-color 0.3s ease;
+        transition: all 0.3s ease;
     }
     
     .booking-row {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+        animation: fadeInRow 0.6s ease forwards;
+        opacity: 0;
     }
+    
+    @keyframes fadeInRow {
+        0% { opacity: 0; transform: translateX(-10px); }
+        100% { opacity: 1; transform: translateX(0); }
+    }
+    
+    .booking-row:nth-child(1) { animation-delay: 0.1s; }
+    .booking-row:nth-child(2) { animation-delay: 0.2s; }
+    .booking-row:nth-child(3) { animation-delay: 0.3s; }
+    .booking-row:nth-child(4) { animation-delay: 0.4s; }
+    .booking-row:nth-child(5) { animation-delay: 0.5s; }
     
     .booking-row:hover {
         background-color: #f8f9fa;
-        transform: scale(1.01);
+        transform: scale(1.01) translateY(-3px);
         box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         z-index: 1;
         position: relative;
+    }
+    
+    .booking-row td {
+        position: relative;
+    }
+    
+    .booking-row td:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(90deg, #eee, transparent);
+        transition: all 0.3s ease;
+    }
+    
+    .booking-row:hover td:after {
+        height: 2px;
+        background: linear-gradient(90deg, #6a11cb, transparent);
     }
     
     /* Product cell styling */
@@ -260,42 +422,80 @@
     .product-info {
         display: flex;
         align-items: center;
+        transition: all 0.3s ease;
     }
     
     .product-thumbnail {
         width: 80px;
         height: 80px;
         object-fit: cover;
-        border-radius: 5px;
+        border-radius: 8px;
         margin-right: 15px;
-        transition: transform 0.3s ease;
+        transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
         box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        border: 2px solid transparent;
     }
     
     .product-thumbnail:hover {
-        transform: scale(1.1);
+        transform: scale(1.15) rotate(2deg);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        border: 2px solid #6a11cb;
     }
     
     .product-name {
         font-weight: 600;
         color: #333;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .product-info:hover .product-name {
+        color: #6a11cb;
+        transform: translateX(5px);
+    }
+    
+    .product-info:hover .product-name:after {
+        content: '→';
+        position: absolute;
+        right: -20px;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0;
+        animation: fadeInArrow 0.5s forwards;
+    }
+    
+    @keyframes fadeInArrow {
+        0% { opacity: 0; right: -10px; }
+        100% { opacity: 1; right: -20px; }
     }
     
     /* Date cell styling */
     .date-info {
         display: flex;
         flex-direction: column;
+        transition: all 0.3s ease;
     }
     
     .booking-date {
         font-weight: 600;
         color: #333;
+        transition: color 0.3s ease;
     }
     
     .booking-time {
         font-size: 12px;
         color: #6c757d;
         margin-top: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .date-cell:hover .booking-date {
+        color: #6a11cb;
+    }
+    
+    .date-cell:hover .booking-time {
+        color: #333;
+        transform: translateY(-2px);
     }
     
     /* Status badge styling */
@@ -305,12 +505,37 @@
         font-size: 14px;
         font-weight: 600;
         display: inline-block;
-        transition: all 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .status-badge:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateX(-100%);
+        transition: all 0.4s ease;
     }
     
     .status-badge:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        padding: 6px 15px;
+    }
+    
+    .status-badge:hover:before {
+        transform: translateX(0);
+        animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
     }
     
     .status-pending {
@@ -337,6 +562,7 @@
     .completed-row {
         opacity: 0.7;
         position: relative;
+        transition: all 0.5s ease;
     }
     
     .completed-row:before {
@@ -350,49 +576,111 @@
         backdrop-filter: blur(1px);
         z-index: 0;
         pointer-events: none;
+        transition: all 0.5s ease;
+    }
+    
+    .completed-row:hover {
+        opacity: 1;
     }
     
     .completed-row:hover:before {
         backdrop-filter: blur(0);
+        background: rgba(255, 255, 255, 0.1);
     }
     
     /* Empty state styling */
     .empty-state {
-        padding: 40px;
+        padding: 60px 40px;
         text-align: center;
+        animation: pulseEmpty 2s infinite alternate;
+    }
+    
+    @keyframes pulseEmpty {
+        0% { transform: scale(1); }
+        100% { transform: scale(1.03); }
     }
     
     .empty-icon {
-        font-size: 50px;
+        font-size: 60px;
         color: #ddd;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
         display: block;
+        transition: all 0.5s ease;
+        animation: floatIcon 3s ease infinite;
+    }
+    
+    @keyframes floatIcon {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0); }
+    }
+    
+    .empty-state:hover .empty-icon {
+        color: #6a11cb;
+        transform: rotate(10deg);
     }
     
     .empty-state h3 {
         color: #333;
         margin-bottom: 10px;
+        transition: all 0.3s ease;
     }
     
     .empty-state p {
         color: #6c757d;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
+        transition: all 0.3s ease;
+        max-width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .empty-state:hover h3 {
+        color: #6a11cb;
+        transform: scale(1.05);
+    }
+    
+    .empty-state:hover p {
+        color: #333;
     }
     
     .browse-products-btn {
         display: inline-block;
         background: linear-gradient(90deg, #6a11cb, #2575fc);
         color: white;
-        padding: 10px 20px;
+        padding: 12px 25px;
         border-radius: 30px;
         text-decoration: none;
         font-weight: 600;
-        transition: all 0.3s ease;
+        transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+    }
+    
+    .browse-products-btn:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, #2575fc, #6a11cb);
+        z-index: -1;
+        transition: all 0.5s ease;
+        opacity: 0;
     }
     
     .browse-products-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 20px rgba(106, 17, 203, 0.2);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(106, 17, 203, 0.3);
+        color: white;
+        text-decoration: none;
+        padding: 12px 30px;
+    }
+    
+    .browse-products-btn:hover:before {
+        opacity: 1;
     }
     
     /* Breadcrumb styling */
@@ -400,27 +688,71 @@
         margin: 20px auto;
         padding: 10px 0;
         max-width: 1100px;
+        animation: fadeInDown 0.5s ease forwards;
+    }
+    
+    @keyframes fadeInDown {
+        0% { opacity: 0; transform: translateY(-20px); }
+        100% { opacity: 1; transform: translateY(0); }
     }
     
     .breadcrumb {
         margin: 0;
+        position: relative;
+    }
+    
+    .breadcrumb:after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #6a11cb, #2575fc);
+        transition: width 0.6s ease;
+    }
+    
+    .breadcrumb:hover:after {
+        width: 100%;
     }
     
     .breadcrumb-item a {
         color: #6a11cb;
         text-decoration: none;
         font-weight: 500;
-        transition: color 0.3s ease;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .breadcrumb-item a:before {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: #6a11cb;
+        transition: width 0.3s ease;
     }
     
     .breadcrumb-item a:hover {
         color: #2575fc;
-        text-decoration: underline;
+        transform: translateY(-2px);
+    }
+    
+    .breadcrumb-item a:hover:before {
+        width: 100%;
     }
     
     .breadcrumb-item.active {
         color: #333;
         font-weight: 500;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .breadcrumb-item.active:hover {
+        transform: scale(1.05);
     }
     
     /* Responsive adjustments */
@@ -474,4 +806,19 @@
         }
     }
 </style>
-{% endblock content %}
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Force redraw to make animations work properly
+        document.body.style.display = 'none';
+        setTimeout(function() {
+            document.body.style.display = '';
+        }, 10);
+        
+        // Add class to body to ensure our styles take precedence
+        document.body.classList.add('booking-page');
+    });
+</script>
+{% endblock extra_js %}
